@@ -1,0 +1,33 @@
+using AirportLounge.Domain.Entities;
+
+namespace AirportLounge.Domain.Interfaces;
+
+public interface IUnitOfWork : IDisposable
+{
+    IRepository<User> Users { get; }
+    IRepository<Employee> Employees { get; }
+    IRepository<Shift> Shifts { get; }
+    IRepository<ShiftAssignment> ShiftAssignments { get; }
+    IRepository<Attendance> Attendances { get; }
+    IRepository<LoungeZone> LoungeZones { get; }
+    IRepository<ZoneStatusLog> ZoneStatusLogs { get; }
+    IRepository<TaskItem> TaskItems { get; }
+    IRepository<Notification> Notifications { get; }
+    IRepository<AuditLog> AuditLogs { get; }
+    IRepository<LeaveType> LeaveTypes { get; }
+    IRepository<LeaveBalance> LeaveBalances { get; }
+    IRepository<LeaveRequest> LeaveRequests { get; }
+    IRepository<SalaryStructure> SalaryStructures { get; }
+    IRepository<PayrollRecord> PayrollRecords { get; }
+    IRepository<PerformanceGoal> PerformanceGoals { get; }
+    IRepository<PerformanceReview> PerformanceReviews { get; }
+    IRepository<TrainingCourse> TrainingCourses { get; }
+    IRepository<TrainingEnrollment> TrainingEnrollments { get; }
+    IRepository<OnboardingProcess> OnboardingProcesses { get; }
+    IRepository<OnboardingTask> OnboardingTasks { get; }
+    IRepository<OffboardingProcess> OffboardingProcesses { get; }
+    IRepository<EmployeeIdCard> EmployeeIdCards { get; }
+    IRepository<EmployeeDocument> EmployeeDocuments { get; }
+
+    Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
+}

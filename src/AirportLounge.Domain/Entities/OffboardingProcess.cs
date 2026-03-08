@@ -1,0 +1,18 @@
+using AirportLounge.Domain.Common;
+using AirportLounge.Domain.Enums;
+
+namespace AirportLounge.Domain.Entities;
+
+public class OffboardingProcess : AuditableEntity
+{
+    public Guid EmployeeId { get; set; }
+    public OffboardingStatus Status { get; set; } = OffboardingStatus.Initiated;
+    public DateTime ResignationDate { get; set; }
+    public DateTime LastWorkingDate { get; set; }
+    public string? Reason { get; set; }
+    public bool ExitSurveyCompleted { get; set; }
+    public bool AssetReturned { get; set; }
+    public bool AccessRevoked { get; set; }
+
+    public Employee Employee { get; set; } = null!;
+}
