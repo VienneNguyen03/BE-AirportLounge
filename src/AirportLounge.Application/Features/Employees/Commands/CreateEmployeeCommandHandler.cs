@@ -27,14 +27,16 @@ public class CreateEmployeeCommandHandler : IRequestHandler<CreateEmployeeComman
     public async Task<Result<Guid>> Handle(CreateEmployeeCommand request, CancellationToken cancellationToken)
     {
         var existingUser = await _unitOfWork.Users.Query()
-            .AnyAsync(u => u.Email == request.Email || u.EmployeeCode == request.EmployeeCode, cancellationToken);
+            .AnyAsync(u => u.Email == request.Email, cancellationToken);
 
-        if (existingUser)
+        var existingEmployeeCode = await _unitOfWork.Employees.Query()
+            .AnyAsync(e => e.EmployeeCode == request.EmployeeCode, cancellationToken);
+
+        if (existingUser || existingEmployeeCode)
             return Result<Guid>.Failure("A user with this email or employee code already exists");
 
         var user = new User
         {
-            EmployeeCode = request.EmployeeCode,
             FullName = request.FullName,
             Email = request.Email,
             PhoneNumber = request.PhoneNumber,
@@ -48,10 +50,11 @@ public class CreateEmployeeCommandHandler : IRequestHandler<CreateEmployeeComman
         var employee = new Employee
         {
             UserId = user.Id,
+            EmployeeCode = request.EmployeeCode,
             Department = request.Department,
             Position = request.Position,
             Skills = request.Skills,
-            HireDate = DateTime.UtcNow,
+            HireDate = request.HireDate,
             DateOfBirth = request.DateOfBirth,
             NationalId = request.NationalId,
             Nationality = request.Nationality,
@@ -62,10 +65,12 @@ public class CreateEmployeeCommandHandler : IRequestHandler<CreateEmployeeComman
             TaxCode = request.TaxCode,
             BankAccountNumber = request.BankAccountNumber,
             BankName = request.BankName,
+            BankAccountHolderName = request.BankAccountHolderName,
             BloodType = request.BloodType,
             EmergencyContactName = request.EmergencyContactName,
             EmergencyContactPhone = request.EmergencyContactPhone,
             EmergencyContactRelationship = request.EmergencyContactRelationship,
+            ProfilePhotoUrl = request.ProfilePhotoUrl,
             CreatedBy = _currentUser.Email
         };
 
