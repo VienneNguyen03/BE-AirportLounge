@@ -82,7 +82,6 @@ public class LoginCommandHandlerTests : IDisposable
             PasswordHash = passwordHash,
             Role = role,
             IsActive = true,
-            EmployeeCode = "ADMIN",
             FullName = "Admin"
         };
         await _context.Users.AddAsync(user);
