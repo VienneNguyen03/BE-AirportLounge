@@ -9,6 +9,7 @@ namespace AirportLounge.Application.Features.Attendance.Queries;
 public record GetAttendanceReportQuery(
     DateTime StartDate, DateTime EndDate,
     Guid? EmployeeId, AttendanceStatus? Status,
+    string? Search,
     int PageNumber = 1, int PageSize = 20
 ) : IRequest<Result<PaginatedList<AttendanceReportDto>>>;
 
@@ -36,6 +37,13 @@ public class GetAttendanceReportQueryHandler
             query = query.Where(a => a.EmployeeId == req.EmployeeId.Value);
         if (req.Status.HasValue)
             query = query.Where(a => a.Status == req.Status.Value);
+        if (!string.IsNullOrWhiteSpace(req.Search))
+        {
+            var search = req.Search.ToLower();
+            query = query.Where(a =>
+                a.Employee.User.FullName.ToLower().Contains(search) ||
+                a.Employee.EmployeeCode.ToLower().Contains(search));
+        }
 
         var total = await query.CountAsync(ct);
 
@@ -44,7 +52,7 @@ public class GetAttendanceReportQueryHandler
             .Skip((req.PageNumber - 1) * req.PageSize)
             .Take(req.PageSize)
             .Select(a => new AttendanceReportDto(
-                a.Id, a.Employee.User.FullName, a.Employee.User.EmployeeCode,
+                a.Id, a.Employee.User.FullName, a.Employee.EmployeeCode,
                 a.ShiftAssignment.Date, a.ShiftAssignment.Shift.Name,
                 a.CheckInTime, a.CheckOutTime, a.WorkedHours,
                 a.Status.ToString(), a.IsManuallyAdjusted, a.IsConfirmed))
@@ -82,7 +90,7 @@ public class ExportAttendanceQueryHandler : IRequestHandler<ExportAttendanceQuer
         var items = await query
             .OrderByDescending(a => a.ShiftAssignment.Date)
             .Select(a => new AttendanceReportDto(
-                a.Id, a.Employee.User.FullName, a.Employee.User.EmployeeCode,
+                a.Id, a.Employee.User.FullName, a.Employee.EmployeeCode,
                 a.ShiftAssignment.Date, a.ShiftAssignment.Shift.Name,
                 a.CheckInTime, a.CheckOutTime, a.WorkedHours,
                 a.Status.ToString(), a.IsManuallyAdjusted, a.IsConfirmed))
