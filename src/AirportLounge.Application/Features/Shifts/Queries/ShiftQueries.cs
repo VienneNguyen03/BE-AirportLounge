@@ -5,42 +5,71 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AirportLounge.Application.Features.Shifts.Queries;
 
-// --- Get All Shifts ---
-public record GetShiftsQuery : IRequest<Result<List<ShiftDto>>>;
+// --- Get All Shifts (paginated, search) ---
+public record GetShiftsQuery(
+    string? Search,
+    int PageNumber = 1,
+    int PageSize = 10
+) : IRequest<Result<PaginatedList<ShiftDto>>>;
 
 public record ShiftDto(Guid Id, string Name, TimeSpan StartTime, TimeSpan EndTime, string? Description, DateTime CreatedAt);
 
-public class GetShiftsQueryHandler : IRequestHandler<GetShiftsQuery, Result<List<ShiftDto>>>
+public class GetShiftsQueryHandler : IRequestHandler<GetShiftsQuery, Result<PaginatedList<ShiftDto>>>
 {
     private readonly IUnitOfWork _uow;
     public GetShiftsQueryHandler(IUnitOfWork uow) => _uow = uow;
 
-    public async Task<Result<List<ShiftDto>>> Handle(GetShiftsQuery req, CancellationToken ct)
+    public async Task<Result<PaginatedList<ShiftDto>>> Handle(GetShiftsQuery req, CancellationToken ct)
     {
-        var shifts = await _uow.Shifts.Query()
+        var query = _uow.Shifts.Query().AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(req.Search))
+        {
+            var search = req.Search.ToLower();
+            query = query.Where(s =>
+                s.Name.ToLower().Contains(search) ||
+                (s.Description != null && s.Description.ToLower().Contains(search)));
+        }
+
+        var totalCount = await query.CountAsync(ct);
+        var items = await query
             .OrderBy(s => s.StartTime)
+            .Skip((req.PageNumber - 1) * req.PageSize)
+            .Take(req.PageSize)
             .Select(s => new ShiftDto(s.Id, s.Name, s.StartTime, s.EndTime, s.Description, s.CreatedAt))
             .ToListAsync(ct);
 
-        return Result<List<ShiftDto>>.Success(shifts);
+        return Result<PaginatedList<ShiftDto>>.Success(
+            new PaginatedList<ShiftDto>(items, totalCount, req.PageNumber, req.PageSize));
     }
 }
 
-// --- Get Schedule by Date Range ---
-public record GetScheduleQuery(DateTime StartDate, DateTime EndDate, Guid? EmployeeId)
-    : IRequest<Result<List<ScheduleItemDto>>>;
+// --- Get Schedule by Date Range (paginated, search) ---
+public record GetScheduleQuery(
+    DateTime StartDate, DateTime EndDate, Guid? EmployeeId,
+    string? Search,
+    int PageNumber = 1, int PageSize = 10
+) : IRequest<Result<PaginatedList<ScheduleItemDto>>>;
 
 public record ScheduleItemDto(
-    Guid AssignmentId, DateTime Date, string ShiftName,
-    TimeSpan StartTime, TimeSpan EndTime,
-    string EmployeeName, string? ZoneName);
+    Guid AssignmentId,
+    Guid ShiftId,
+    Guid EmployeeId,
+    Guid? LoungeZoneId,
+    DateTime Date,
+    string ShiftName,
+    TimeSpan StartTime,
+    TimeSpan EndTime,
+    string EmployeeName,
+    string EmployeeCode,
+    string? ZoneName);
 
-public class GetScheduleQueryHandler : IRequestHandler<GetScheduleQuery, Result<List<ScheduleItemDto>>>
+public class GetScheduleQueryHandler : IRequestHandler<GetScheduleQuery, Result<PaginatedList<ScheduleItemDto>>>
 {
     private readonly IUnitOfWork _uow;
     public GetScheduleQueryHandler(IUnitOfWork uow) => _uow = uow;
 
-    public async Task<Result<List<ScheduleItemDto>>> Handle(GetScheduleQuery req, CancellationToken ct)
+    public async Task<Result<PaginatedList<ScheduleItemDto>>> Handle(GetScheduleQuery req, CancellationToken ct)
     {
         var query = _uow.ShiftAssignments.Query()
             .Include(sa => sa.Shift)
@@ -51,14 +80,36 @@ public class GetScheduleQueryHandler : IRequestHandler<GetScheduleQuery, Result<
         if (req.EmployeeId.HasValue)
             query = query.Where(sa => sa.EmployeeId == req.EmployeeId.Value);
 
+        if (!string.IsNullOrWhiteSpace(req.Search))
+        {
+            var search = req.Search.ToLower();
+            query = query.Where(sa =>
+                sa.Employee.User.FullName.ToLower().Contains(search) ||
+                sa.Employee.EmployeeCode.ToLower().Contains(search) ||
+                (sa.LoungeZone != null && sa.LoungeZone.Name.ToLower().Contains(search)) ||
+                sa.Shift.Name.ToLower().Contains(search));
+        }
+
+        var totalCount = await query.CountAsync(ct);
         var items = await query
             .OrderBy(sa => sa.Date).ThenBy(sa => sa.Shift.StartTime)
+            .Skip((req.PageNumber - 1) * req.PageSize)
+            .Take(req.PageSize)
             .Select(sa => new ScheduleItemDto(
-                sa.Id, sa.Date, sa.Shift.Name,
-                sa.Shift.StartTime, sa.Shift.EndTime,
-                sa.Employee.User.FullName, sa.LoungeZone != null ? sa.LoungeZone.Name : null))
+                sa.Id,
+                sa.ShiftId,
+                sa.EmployeeId,
+                sa.LoungeZoneId,
+                sa.Date,
+                sa.Shift.Name,
+                sa.Shift.StartTime,
+                sa.Shift.EndTime,
+                sa.Employee.User.FullName,
+                sa.Employee.EmployeeCode,
+                sa.LoungeZone != null ? sa.LoungeZone.Name : null))
             .ToListAsync(ct);
 
-        return Result<List<ScheduleItemDto>>.Success(items);
+        return Result<PaginatedList<ScheduleItemDto>>.Success(
+            new PaginatedList<ScheduleItemDto>(items, totalCount, req.PageNumber, req.PageSize));
     }
 }
