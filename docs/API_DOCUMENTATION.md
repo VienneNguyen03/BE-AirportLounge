@@ -80,6 +80,7 @@ Tài liệu mô tả từng API: mục đích, quyền truy cập, và chi tiế
 | `position` | string | Không | Vị trí công việc |
 | `skills` | string | Không | Kỹ năng (có thể chuỗi mô tả) |
 | `dateOfBirth` | string (date) | Không | Ngày sinh (ISO 8601) |
+| `hireDate` | string (date) | Có | Ngày vào làm (ISO 8601, lưu xuống HireDate) |
 | `nationalId` | string | Không | CCCD / hộ chiếu |
 | `nationality` | string | Không | Quốc tịch |
 | `gender` | int? (Gender) | Không | 0=Male, 1=Female, 2=Other |
@@ -153,6 +154,7 @@ Tài liệu mô tả từng API: mục đích, quyền truy cập, và chi tiế
 | `emergencyContactName` | string | Không | Liên hệ khẩn cấp – tên |
 | `emergencyContactPhone` | string | Không | Liên hệ khẩn cấp – SĐT |
 | `emergencyContactRelationship` | string | Không | Mối quan hệ |
+| `hireDate` | string (date) | Không | Ngày vào làm (ISO 8601) |
 | `profilePhotoUrl` | string | Không | URL ảnh đại diện |
 
 **Response (200):** `{ isSuccess, data: true, message }`
@@ -199,10 +201,38 @@ Tài liệu mô tả từng API: mục đích, quyền truy cập, và chi tiế
 
 ---
 
+### PUT `/api/shifts/{id}`
+
+**Quyền:** Admin, Manager  
+**Mục đích:** Cập nhật thông tin một ca làm (tên, giờ bắt đầu/kết thúc, mô tả). Body phải có `shiftId` trùng với `id` trong URL.
+
+| Trường | Kiểu | Bắt buộc | Mô tả |
+|--------|------|----------|--------|
+| `shiftId` | Guid | Có | Phải trùng với `id` trong URL |
+| `name` | string | Có | Tên ca |
+| `startTime` | string (TimeSpan) | Có | Giờ bắt đầu `"HH:mm:ss"` |
+| `endTime` | string (TimeSpan) | Có | Giờ kết thúc `"HH:mm:ss"` |
+| `description` | string | Không | Mô tả ca |
+
+**Response (200):** `{ isSuccess, data: true, message }`
+
+---
+
+### DELETE `/api/shifts/{id}`
+
+**Quyền:** Admin, Manager  
+**Mục đích:** Xóa (soft delete) một ca làm. Không cho xóa nếu ca đó còn phân công trong tương lai.
+
+**Path:** `id` (Guid) – ID ca làm.
+
+**Response (200):** `{ isSuccess, data: true, message }` (hoặc `isSuccess: false` nếu còn phân công tương lai)
+
+---
+
 ### POST `/api/shifts/assign`
 
 **Quyền:** Admin, Manager  
-**Mục đích:** Gán nhân viên vào một ca trong một ngày cụ thể. Hệ thống kiểm tra trùng ca và nghỉ phép đã duyệt; nếu có thì trả lỗi và gợi ý nhân viên khác.
+**Mục đích:** Gán nhân viên vào một ca trong một ngày cụ thể. Hệ thống kiểm tra trùng ca (overlap theo khung giờ) và nghỉ phép đã duyệt; nếu có thì trả lỗi business, không tạo phân công.
 
 | Trường | Kiểu | Bắt buộc | Mô tả |
 |--------|------|----------|--------|
@@ -212,6 +242,32 @@ Tài liệu mô tả từng API: mục đích, quyền truy cập, và chi tiế
 | `loungeZoneId` | Guid? | Không | ID khu vực lounge (nếu gán theo khu vực) |
 
 **Response (200):** `{ isSuccess, data: <assignmentId (Guid)>, message }`
+
+---
+
+### POST `/api/shifts/assign/batch`
+
+**Quyền:** Admin, Manager  
+**Mục đích:** Lên lịch ca cho một nhân viên theo **khoảng ngày** (từ ngày → đến ngày). API sẽ tạo lần lượt các phân công đơn (tương đương gọi nhiều lần `/shifts/assign`), dùng chung ca, nhân viên và (tùy chọn) khu vực.  
+Nếu bất kỳ ngày nào vi phạm rule (trùng ca, đang nghỉ phép, đã có phân công cùng ca trong ngày đó), batch sẽ **dừng lại tại ngày đầu tiên lỗi** và trả về thông điệp lỗi, không tạo thêm bản ghi sau đó.
+
+**Body:**
+
+| Trường | Kiểu | Bắt buộc | Mô tả |
+|--------|------|----------|--------|
+| `items` | array | Có | Danh sách các phân công cần tạo |
+
+**Mỗi phần tử trong `items`:**
+
+| Trường | Kiểu | Bắt buộc | Mô tả |
+|--------|------|----------|--------|
+| `shiftId` | Guid | Có | ID ca làm |
+| `employeeId` | Guid | Có | ID nhân viên |
+| `date` | string (date) | Có | Ngày làm (ISO 8601 date) – mỗi phần tử là một ngày cụ thể trong khoảng đã chọn |
+| `loungeZoneId` | Guid? | Không | ID khu vực lounge (nếu gán theo khu vực) |
+
+**Response (200):** `{ isSuccess, data: [ <assignmentId (Guid)>, ... ], message }`  
+**Response (400):** `{ isSuccess: false, data: null, message: "<lý do lỗi business – vd: nhân viên đã có ca trùng ngày này>" }`
 
 ---
 
@@ -227,6 +283,34 @@ Tài liệu mô tả từng API: mục đích, quyền truy cập, và chi tiế
 | `employeeId` | Guid? | Lọc theo nhân viên; null = tất cả (tùy quyền) |
 
 **Response (200):** `{ isSuccess, data: [ schedule items ], message }`
+
+---
+
+### PUT `/api/shifts/assignments/{id}`
+
+**Quyền:** Admin, Manager  
+**Mục đích:** Cập nhật một phân công ca đã tồn tại (đổi ca, đổi nhân viên, đổi ngày, đổi khu vực). Hệ thống kiểm tra trùng ca và nghỉ phép tương tự khi tạo mới.
+
+| Trường | Kiểu | Bắt buộc | Mô tả |
+|--------|------|----------|--------|
+| `assignmentId` | Guid | Có | Phải trùng với `id` trong URL |
+| `shiftId` | Guid | Có | ID ca mới |
+| `employeeId` | Guid | Có | ID nhân viên |
+| `date` | string (date) | Có | Ngày làm (ISO 8601 date) |
+| `loungeZoneId` | Guid? | Không | ID khu vực lounge |
+
+**Response (200):** `{ isSuccess, data: true, message }`
+
+---
+
+### DELETE `/api/shifts/assignments/{id}`
+
+**Quyền:** Admin, Manager  
+**Mục đích:** Hủy phân công ca (soft delete trên bản ghi assignment).
+
+**Path:** `id` (Guid) – ID phân công ca.
+
+**Response (200):** `{ isSuccess, data: true, message }`
 
 ---
 
@@ -359,6 +443,36 @@ Tài liệu mô tả từng API: mục đích, quyền truy cập, và chi tiế
 
 ---
 
+### PUT `/api/tasks/{id}`
+
+**Quyền:** Admin, Manager  
+**Mục đích:** Cập nhật thông tin nhiệm vụ (tiêu đề, mô tả, độ ưu tiên, người được giao, khu vực, hạn hoàn thành). Body phải có `taskId` trùng với `id` trong URL.
+
+| Trường | Kiểu | Bắt buộc | Mô tả |
+|--------|------|----------|--------|
+| `taskId` | Guid | Có | Phải trùng với `id` trong URL |
+| `title` | string | Có | Tiêu đề nhiệm vụ |
+| `description` | string | Không | Mô tả chi tiết |
+| `priority` | int (TaskPriority) | Có | Độ ưu tiên |
+| `assignedToId` | Guid? | Không | ID nhân viên được giao |
+| `loungeZoneId` | Guid? | Không | ID khu vực lounge |
+| `dueDate` | string (date-time)? | Không | Hạn hoàn thành |
+
+**Response (200):** `{ isSuccess, data: true, message }`
+
+---
+
+### DELETE `/api/tasks/{id}`
+
+**Quyền:** Admin, Manager  
+**Mục đích:** Xóa (hoặc đánh dấu hủy) một nhiệm vụ.
+
+**Path:** `id` (Guid) – ID nhiệm vụ.
+
+**Response (200):** `{ isSuccess, data: true, message }`
+
+---
+
 ### GET `/api/tasks`
 
 **Quyền:** Đã đăng nhập  
@@ -436,6 +550,33 @@ Tài liệu mô tả từng API: mục đích, quyền truy cập, và chi tiế
 | `status` | int? (ZoneStatus) | 0=Available, 1=InService, 2=NeedsCleaning, 3=NeedsSupport, 4=Full, 5=Closed |
 
 **Response (200):** `{ isSuccess, data: [ zones ], message }`
+
+---
+
+### PUT `/api/zones/{id}`
+
+**Quyền:** Admin, Manager  
+**Mục đích:** Cập nhật thông tin khu vực (tên, mô tả, sức chứa).
+
+| Trường | Kiểu | Bắt buộc | Mô tả |
+|--------|------|----------|--------|
+| `zoneId` | Guid | Có | Phải trùng với `id` trong URL |
+| `name` | string | Có | Tên khu vực |
+| `description` | string | Không | Mô tả |
+| `capacity` | int | Có | Sức chứa (số người) |
+
+**Response (200):** `{ isSuccess, data: true, message }`
+
+---
+
+### DELETE `/api/zones/{id}`
+
+**Quyền:** Admin, Manager  
+**Mục đích:** Xóa một khu vực (thường là soft delete, chỉ khi không còn dữ liệu phụ thuộc quan trọng).
+
+**Path:** `id` (Guid) – ID khu vực.
+
+**Response (200):** `{ isSuccess, data: true, message }`
 
 ---
 
@@ -996,6 +1137,17 @@ Tài liệu mô tả từng API: mục đích, quyền truy cập, và chi tiế
 
 ---
 
+### DELETE `/api/leaves/types/{id}`
+
+**Quyền:** Admin  
+**Mục đích:** Xóa một loại nghỉ phép. Thường chỉ cho phép xóa khi chưa có balance/requests gắn với loại đó (tùy logic cài đặt).
+
+**Path:** `id` (Guid) – ID loại nghỉ.
+
+**Response (200):** `{ isSuccess, data: true, message }`
+
+---
+
 ### POST `/api/leaves/balance`
 
 **Quyền:** Admin, Manager  
@@ -1052,6 +1204,17 @@ Tài liệu mô tả từng API: mục đích, quyền truy cập, và chi tiế
 | `leaveRequestId` | Guid | Có | Phải trùng với `id` trong URL |
 | `approve` | bool | Có | true = duyệt, false = từ chối |
 | `comment` | string | Không | Nhận xét (đặc biệt khi từ chối) |
+
+**Response (200):** `{ isSuccess, data: true, message }`
+
+---
+
+### POST `/api/leaves/requests/{id}/cancel`
+
+**Quyền:** Đã đăng nhập (nhân viên gửi yêu cầu của mình)  
+**Mục đích:** Hủy một yêu cầu nghỉ phép đã tạo (khi vẫn còn ở trạng thái phù hợp cho hủy – vd: Pending).
+
+**Path:** `id` (Guid) – ID yêu cầu nghỉ phép.
 
 **Response (200):** `{ isSuccess, data: true, message }`
 
