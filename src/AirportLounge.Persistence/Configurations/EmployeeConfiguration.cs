@@ -11,10 +11,14 @@ public class EmployeeConfiguration : IEntityTypeConfiguration<Employee>
         builder.ToTable("employees");
         builder.HasKey(e => e.Id);
 
+        builder.Property(e => e.EmployeeCode).HasMaxLength(50).IsRequired();
+        builder.HasIndex(e => e.EmployeeCode)
+            .IsUnique()
+            .HasFilter("\"IsDeleted\" = false");
+
         builder.Property(e => e.Department).HasMaxLength(100);
         builder.Property(e => e.Position).HasMaxLength(100);
         builder.Property(e => e.Skills).HasMaxLength(500);
-        builder.Property(e => e.Address).HasMaxLength(500);
 
         builder.Property(e => e.NationalId).HasMaxLength(50);
         builder.Property(e => e.Nationality).HasMaxLength(100);
