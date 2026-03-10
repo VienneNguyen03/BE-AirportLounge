@@ -1,5 +1,6 @@
 using AirportLounge.Domain.Common;
 using AirportLounge.Domain.Entities;
+using AirportLounge.Persistence.Converters;
 using Microsoft.EntityFrameworkCore;
 
 namespace AirportLounge.Persistence;
@@ -42,6 +43,14 @@ public class AppDbContext : DbContext
     {
         base.OnModelCreating(modelBuilder);
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
+    }
+
+    protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+    {
+        configurationBuilder.Properties<DateTime>()
+            .HaveConversion<UtcDateTimeConverter>();
+        configurationBuilder.Properties<DateTime?>()
+            .HaveConversion<NullableUtcDateTimeConverter>();
     }
 
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
