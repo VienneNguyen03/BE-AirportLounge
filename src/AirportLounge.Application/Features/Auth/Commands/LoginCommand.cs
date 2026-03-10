@@ -14,7 +14,6 @@ public record LoginResponse(
 
 public record UserDto(
     Guid Id,
-    string EmployeeCode,
     string FullName,
     string Email,
     string Role);
