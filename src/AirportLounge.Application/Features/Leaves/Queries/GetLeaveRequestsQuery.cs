@@ -12,6 +12,7 @@ public record GetLeaveRequestsQuery(
     LeaveRequestStatus? Status,
     DateTime? StartDate,
     DateTime? EndDate,
+    string? Search,
     int PageNumber = 1,
     int PageSize = 10) : IRequest<Result<PaginatedList<LeaveRequestDto>>>;
 
@@ -73,6 +74,11 @@ public class GetLeaveRequestsQueryHandler : IRequestHandler<GetLeaveRequestsQuer
 
         if (request.EndDate.HasValue)
             query = query.Where(lr => lr.EndDate <= request.EndDate.Value.Date);
+        if (!string.IsNullOrWhiteSpace(request.Search))
+        {
+            var search = request.Search.ToLower();
+            query = query.Where(lr => lr.Employee.User.FullName.ToLower().Contains(search));
+        }
 
         var totalCount = await query.CountAsync(cancellationToken);
 
