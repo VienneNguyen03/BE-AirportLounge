@@ -41,10 +41,15 @@ public class EmployeesController : ControllerBase
     [Authorize(Roles = "Admin,Manager")]
     [ProducesResponseType(typeof(Result<PaginatedList<EmployeeListDto>>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public async Task<IActionResult> GetAll([FromQuery] string? search, [FromQuery] string? department,
-        [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
+    public async Task<IActionResult> GetAll(
+        [FromQuery] string? search,
+        [FromQuery] string? department,
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 10,
+        [FromQuery] bool includeInactive = false)
     {
-        var result = await _mediator.Send(new GetEmployeesQuery(search, department, pageNumber, pageSize));
+        var result = await _mediator.Send(
+            new GetEmployeesQuery(search, department, pageNumber, pageSize, includeInactive));
         return Ok(result);
     }
 
@@ -69,6 +74,34 @@ public class EmployeesController : ControllerBase
     public async Task<IActionResult> Deactivate(Guid id)
     {
         var result = await _mediator.Send(new DeactivateEmployeeCommand(id));
+        return result.IsSuccess ? Ok(result) : BadRequest(result);
+    }
+
+    [HttpPost("batch-delete")]
+    [Authorize(Roles = "Admin")]
+    [ProducesResponseType(typeof(Result<int>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> DeactivateBatch([FromBody] IReadOnlyList<Guid> ids)
+    {
+        if (ids is null || ids.Count == 0)
+            return BadRequest("No IDs provided");
+
+        var result = await _mediator.Send(new DeactivateEmployeesBatchCommand(ids));
+        return result.IsSuccess ? Ok(result) : BadRequest(result);
+    }
+
+    [HttpPost("{id:guid}/reset-password")]
+    [Authorize(Roles = "Admin")]
+    [ProducesResponseType(typeof(Result<bool>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> ResetPassword(Guid id, [FromBody] string newPassword)
+    {
+        if (string.IsNullOrWhiteSpace(newPassword))
+            return BadRequest("New password is required");
+
+        var result = await _mediator.Send(new ResetPasswordCommand(id, newPassword));
         return result.IsSuccess ? Ok(result) : BadRequest(result);
     }
 }
