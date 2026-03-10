@@ -8,12 +8,17 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AirportLounge.Application.Features.LoungeZones.Queries;
 
-public record GetZonesQuery(ZoneStatus? Status = null) : IRequest<Result<List<ZoneDto>>>;
+public record GetZonesQuery(
+    string? Search,
+    ZoneStatus? Status = null,
+    int PageNumber = 1,
+    int PageSize = 10
+) : IRequest<Result<PaginatedList<ZoneDto>>>;
 
 public record ZoneDto(Guid Id, string Name, string? Description, int Capacity,
     int CurrentOccupancy, string Status);
 
-public class GetZonesQueryHandler : IRequestHandler<GetZonesQuery, Result<List<ZoneDto>>>
+public class GetZonesQueryHandler : IRequestHandler<GetZonesQuery, Result<PaginatedList<ZoneDto>>>
 {
     private readonly IUnitOfWork _uow;
     private readonly ICacheService _cache;
@@ -24,24 +29,31 @@ public class GetZonesQueryHandler : IRequestHandler<GetZonesQuery, Result<List<Z
         _cache = cache;
     }
 
-    public async Task<Result<List<ZoneDto>>> Handle(GetZonesQuery req, CancellationToken ct)
+    public async Task<Result<PaginatedList<ZoneDto>>> Handle(GetZonesQuery req, CancellationToken ct)
     {
-        var cacheKey = CacheKeys.ZonesList(req.Status?.ToString());
-        var cached = await _cache.GetAsync<List<ZoneDto>>(cacheKey, ct);
-        if (cached is not null)
-            return Result<List<ZoneDto>>.Success(cached);
+        var query = _uow.LoungeZones.Query().AsQueryable();
 
-        var query = _uow.LoungeZones.Query();
         if (req.Status.HasValue)
             query = query.Where(z => z.Status == req.Status.Value);
+        if (!string.IsNullOrWhiteSpace(req.Search))
+        {
+            var search = req.Search.ToLower();
+            query = query.Where(z =>
+                z.Name.ToLower().Contains(search) ||
+                (z.Description != null && z.Description.ToLower().Contains(search)));
+        }
 
-        var zones = await query.OrderBy(z => z.Name)
+        var totalCount = await query.CountAsync(ct);
+        var items = await query
+            .OrderBy(z => z.Name)
+            .Skip((req.PageNumber - 1) * req.PageSize)
+            .Take(req.PageSize)
             .Select(z => new ZoneDto(z.Id, z.Name, z.Description, z.Capacity,
                 z.CurrentOccupancy, z.Status.ToString()))
             .ToListAsync(ct);
 
-        await _cache.SetAsync(cacheKey, zones, CacheKeys.ZonesTtl, ct);
-        return Result<List<ZoneDto>>.Success(zones);
+        return Result<PaginatedList<ZoneDto>>.Success(
+            new PaginatedList<ZoneDto>(items, totalCount, req.PageNumber, req.PageSize));
     }
 }
 
