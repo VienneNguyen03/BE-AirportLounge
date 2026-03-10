@@ -37,6 +37,20 @@ public class LeavesController : ControllerBase
         return result.IsSuccess ? Ok(result) : BadRequest(result);
     }
 
+    [HttpPut("types/{id:guid}")]
+    [Authorize(Roles = "Admin")]
+    [ProducesResponseType(typeof(Result<bool>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> UpdateLeaveType(Guid id, [FromBody] UpdateLeaveTypeCommand command)
+    {
+        if (id != command.Id)
+            return BadRequest("ID mismatch");
+
+        var result = await _mediator.Send(command);
+        return result.IsSuccess ? Ok(result) : BadRequest(result);
+    }
+
     [HttpPost("balance")]
     [Authorize(Roles = "Admin,Manager")]
     [ProducesResponseType(typeof(Result<Guid>), StatusCodes.Status200OK)]
@@ -80,15 +94,35 @@ public class LeavesController : ControllerBase
         return result.IsSuccess ? Ok(result) : BadRequest(result);
     }
 
+    [HttpPost("requests/{id:guid}/cancel")]
+    [ProducesResponseType(typeof(Result<bool>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> CancelRequest(Guid id)
+    {
+        var result = await _mediator.Send(new CancelLeaveRequestCommand(id));
+        return result.IsSuccess ? Ok(result) : BadRequest(result);
+    }
+
+    [HttpDelete("types/{id:guid}")]
+    [Authorize(Roles = "Admin")]
+    [ProducesResponseType(typeof(Result<bool>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> DeleteLeaveType(Guid id)
+    {
+        var result = await _mediator.Send(new DeleteLeaveTypeCommand(id));
+        return result.IsSuccess ? Ok(result) : BadRequest(result);
+    }
+
     [HttpGet("requests")]
     [ProducesResponseType(typeof(Result<PaginatedList<LeaveRequestDto>>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetRequests(
         [FromQuery] Guid? employeeId, [FromQuery] LeaveRequestStatus? status,
         [FromQuery] DateTime? startDate, [FromQuery] DateTime? endDate,
+        [FromQuery] string? search,
         [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
     {
-        var result = await _mediator.Send(new GetLeaveRequestsQuery(employeeId, status, startDate, endDate, pageNumber, pageSize));
+        var result = await _mediator.Send(new GetLeaveRequestsQuery(employeeId, status, startDate, endDate, search, pageNumber, pageSize));
         return Ok(result);
     }
 
@@ -100,5 +134,18 @@ public class LeavesController : ControllerBase
     {
         var result = await _mediator.Send(new GetPendingLeaveRequestsQuery());
         return Ok(result);
+    }
+
+    [HttpPost("requests/batch-delete")]
+    [Authorize(Roles = "Admin,Manager")]
+    [ProducesResponseType(typeof(Result<int>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> DeleteRequestsBatch([FromBody] IReadOnlyList<Guid> ids)
+    {
+        if (ids is null || ids.Count == 0)
+            return BadRequest("No IDs provided");
+
+        var result = await _mediator.Send(new DeleteLeaveRequestsBatchCommand(ids));
+        return result.IsSuccess ? Ok(result) : BadRequest(result);
     }
 }
