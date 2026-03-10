@@ -5,6 +5,7 @@ using AirportLounge.Domain.Entities;
 using AirportLounge.Domain.Interfaces;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using System.Linq;
 
 namespace AirportLounge.Application.Features.Employees.Commands;
 
@@ -57,5 +58,41 @@ public class DeactivateEmployeeCommandHandler : IRequestHandler<DeactivateEmploy
         await _cache.RemoveAsync(CacheKeys.ManagerDashboard, cancellationToken);
 
         return Result<bool>.Success(true, "Employee deactivated successfully");
+    }
+}
+
+public record DeactivateEmployeesBatchCommand(IReadOnlyList<Guid> EmployeeIds) : IRequest<Result<int>>;
+
+public class DeactivateEmployeesBatchCommandHandler : IRequestHandler<DeactivateEmployeesBatchCommand, Result<int>>
+{
+    private readonly IMediator _mediator;
+
+    public DeactivateEmployeesBatchCommandHandler(IMediator mediator)
+    {
+        _mediator = mediator;
+    }
+
+    public async Task<Result<int>> Handle(DeactivateEmployeesBatchCommand request, CancellationToken cancellationToken)
+    {
+        if (request.EmployeeIds is null || request.EmployeeIds.Count == 0)
+        {
+            return Result<int>.Failure("No employee IDs provided");
+        }
+
+        var distinctIds = request.EmployeeIds.Distinct().ToList();
+        var processed = 0;
+
+        foreach (var id in distinctIds)
+        {
+            var result = await _mediator.Send(new DeactivateEmployeeCommand(id), cancellationToken);
+            if (!result.IsSuccess)
+            {
+                return Result<int>.Failure(result.Message ?? $"Failed to deactivate employee {id}");
+            }
+
+            processed++;
+        }
+
+        return Result<int>.Success(processed, $"Deactivated {processed} employees");
     }
 }
