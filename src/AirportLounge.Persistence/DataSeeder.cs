@@ -21,7 +21,6 @@ public static class DataSeeder
         var admin = new User
         {
             Id = Guid.Parse("11111111-1111-1111-1111-111111111111"),
-            EmployeeCode = "ADMIN001",
             FullName = "System Administrator",
             Email = AdminEmail,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(AdminDefaultPassword, BCrypt.Net.BCrypt.GenerateSalt(12)),
