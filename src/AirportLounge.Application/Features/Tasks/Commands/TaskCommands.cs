@@ -78,3 +78,84 @@ public class UpdateTaskStatusCommandHandler : IRequestHandler<UpdateTaskStatusCo
         return Result<bool>.Success(true, $"Task status updated to {req.NewStatus}");
     }
 }
+
+// --- Update Task ---
+public record UpdateTaskCommand(
+    Guid TaskId, string Title, string? Description, TaskPriority Priority,
+    Guid? AssignedToId, Guid? LoungeZoneId, DateTime? DueDate
+) : IRequest<Result<bool>>;
+
+public class UpdateTaskCommandHandler : IRequestHandler<UpdateTaskCommand, Result<bool>>
+{
+    private readonly IUnitOfWork _uow;
+    private readonly ICurrentUserService _currentUser;
+
+    public UpdateTaskCommandHandler(IUnitOfWork uow, ICurrentUserService currentUser)
+    { _uow = uow; _currentUser = currentUser; }
+
+    public async Task<Result<bool>> Handle(UpdateTaskCommand req, CancellationToken ct)
+    {
+        var task = await _uow.TaskItems.GetByIdAsync(req.TaskId, ct);
+        if (task is null) return Result<bool>.Failure("Task not found");
+
+        task.Title = req.Title;
+        task.Description = req.Description;
+        task.Priority = req.Priority;
+        task.AssignedToId = req.AssignedToId;
+        task.LoungeZoneId = req.LoungeZoneId;
+        task.DueDate = req.DueDate;
+        task.UpdatedBy = _currentUser.Email;
+
+        _uow.TaskItems.Update(task);
+        await _uow.SaveChangesAsync(ct);
+        return Result<bool>.Success(true, "Task updated");
+    }
+}
+
+// --- Delete Task ---
+public record DeleteTaskCommand(Guid TaskId) : IRequest<Result<bool>>;
+
+public class DeleteTaskCommandHandler : IRequestHandler<DeleteTaskCommand, Result<bool>>
+{
+    private readonly IUnitOfWork _uow;
+    public DeleteTaskCommandHandler(IUnitOfWork uow) => _uow = uow;
+
+    public async Task<Result<bool>> Handle(DeleteTaskCommand req, CancellationToken ct)
+    {
+        var task = await _uow.TaskItems.GetByIdAsync(req.TaskId, ct);
+        if (task is null) return Result<bool>.Failure("Task not found");
+
+        task.IsDeleted = true;
+        _uow.TaskItems.Update(task);
+        await _uow.SaveChangesAsync(ct);
+        return Result<bool>.Success(true, "Task deleted");
+    }
+}
+
+// --- Delete Tasks Batch ---
+public record DeleteTasksBatchCommand(IReadOnlyList<Guid> TaskIds) : IRequest<Result<int>>;
+
+public class DeleteTasksBatchCommandHandler : IRequestHandler<DeleteTasksBatchCommand, Result<int>>
+{
+    private readonly IMediator _mediator;
+
+    public DeleteTasksBatchCommandHandler(IMediator mediator) => _mediator = mediator;
+
+    public async Task<Result<int>> Handle(DeleteTasksBatchCommand req, CancellationToken ct)
+    {
+        if (req.TaskIds is null || req.TaskIds.Count == 0)
+            return Result<int>.Failure("No task IDs provided");
+
+        var processed = 0;
+        foreach (var id in req.TaskIds.Distinct())
+        {
+            var result = await _mediator.Send(new DeleteTaskCommand(id), ct);
+            if (!result.IsSuccess)
+                return Result<int>.Failure(result.Message ?? $"Failed to delete task {id}");
+
+            processed++;
+        }
+
+        return Result<int>.Success(processed, $"Deleted {processed} tasks");
+    }
+}
