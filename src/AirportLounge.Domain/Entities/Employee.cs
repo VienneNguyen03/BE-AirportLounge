@@ -6,13 +6,12 @@ namespace AirportLounge.Domain.Entities;
 public class Employee : AuditableEntity
 {
     public Guid UserId { get; set; }
+    public string EmployeeCode { get; set; } = string.Empty;
     public string? Department { get; set; }
     public string? Position { get; set; }
     public string? Skills { get; set; }
-    public string? Address { get; set; }
     public DateTime? DateOfBirth { get; set; }
     public DateTime HireDate { get; set; }
-
     public string? NationalId { get; set; }
     public string? Nationality { get; set; }
     public Gender? Gender { get; set; }
@@ -22,6 +21,7 @@ public class Employee : AuditableEntity
     public string? TaxCode { get; set; }
     public string? BankAccountNumber { get; set; }
     public string? BankName { get; set; }
+    public string? BankAccountHolderName { get; set; }
     public string? BloodType { get; set; }
     public string? EmergencyContactName { get; set; }
     public string? EmergencyContactPhone { get; set; }
