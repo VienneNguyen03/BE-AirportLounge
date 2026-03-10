@@ -15,6 +15,7 @@ public record CreateEmployeeCommand(
     string? Position,
     string? Skills,
     DateTime? DateOfBirth,
+    DateTime HireDate,
     string? NationalId,
     string? Nationality,
     Gender? Gender,
@@ -24,8 +25,10 @@ public record CreateEmployeeCommand(
     string? TaxCode,
     string? BankAccountNumber,
     string? BankName,
+    string? BankAccountHolderName,
     string? BloodType,
     string? EmergencyContactName,
     string? EmergencyContactPhone,
-    string? EmergencyContactRelationship
+    string? EmergencyContactRelationship,
+    string? ProfilePhotoUrl
 ) : IRequest<Result<Guid>>;
