@@ -10,10 +10,10 @@ public static class TaskExportService
     public static string ToCsv(List<TaskDto> items)
     {
         var sb = new System.Text.StringBuilder();
-        sb.AppendLine("Id,Title,Description,Priority,Status,AssignedTo,Zone,DueDate,CompletedAt,CreatedAt");
+        sb.AppendLine("Id,Title,Description,Priority,Status,AssignedToName,Zone,DueDate,CompletedAt,CreatedAt");
         foreach (var t in items)
         {
-            sb.AppendLine($"{t.Id},{EscapeCsv(t.Title)},{EscapeCsv(t.Description)},{t.Priority},{t.Status},{EscapeCsv(t.AssignedTo)},{EscapeCsv(t.Zone)},{t.DueDate:yyyy-MM-dd},{t.CompletedAt:yyyy-MM-dd HH:mm},{t.CreatedAt:yyyy-MM-dd HH:mm}");
+            sb.AppendLine($"{t.Id},{EscapeCsv(t.Title)},{EscapeCsv(t.Description)},{t.Priority},{t.Status},{EscapeCsv(t.AssignedToName)},{EscapeCsv(t.Zone)},{t.DueDate:yyyy-MM-dd},{t.CompletedAt:yyyy-MM-dd HH:mm},{t.CreatedAt:yyyy-MM-dd HH:mm}");
         }
         return sb.ToString();
     }
@@ -59,7 +59,7 @@ public static class TaskExportService
                         table.Cell().BorderBottom(0.5f).Padding(4).Text(t.Priority).FontSize(8);
                         table.Cell().BorderBottom(0.5f).Padding(4).Text(t.Status).FontSize(8);
                         table.Cell().BorderBottom(0.5f).Padding(4).Text(t.Zone ?? "-").FontSize(8);
-                        table.Cell().BorderBottom(0.5f).Padding(4).Text(t.AssignedTo ?? "-").FontSize(8);
+                        table.Cell().BorderBottom(0.5f).Padding(4).Text(t.AssignedToName ?? "-").FontSize(8);
                         table.Cell().BorderBottom(0.5f).Padding(4).Text(t.DueDate?.ToString("yyyy-MM-dd") ?? "-").FontSize(8);
                         table.Cell().BorderBottom(0.5f).Padding(4).Text(t.CreatedAt.ToString("yyyy-MM-dd HH:mm")).FontSize(8);
                     }
