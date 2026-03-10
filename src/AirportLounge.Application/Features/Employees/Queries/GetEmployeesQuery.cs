@@ -9,11 +9,12 @@ public record GetEmployeesQuery(
     string? Search,
     string? Department,
     int PageNumber = 1,
-    int PageSize = 10
+    int PageSize = 10,
+    bool IncludeInactive = false
 ) : IRequest<Result<PaginatedList<EmployeeListDto>>>;
 
 public record EmployeeListDto(
-    Guid Id, string EmployeeCode, string FullName, string Email,
+    Guid Id, string EmployeeCode, string FullName, string Email, string PhoneNumber,
     string Role, string? Department, string? Position, bool IsActive);
 
 public class GetEmployeesQueryHandler : IRequestHandler<GetEmployeesQuery, Result<PaginatedList<EmployeeListDto>>>
@@ -24,9 +25,19 @@ public class GetEmployeesQueryHandler : IRequestHandler<GetEmployeesQuery, Resul
 
     public async Task<Result<PaginatedList<EmployeeListDto>>> Handle(GetEmployeesQuery request, CancellationToken cancellationToken)
     {
-        var query = _unitOfWork.Employees.Query()
-            .Include(e => e.User)
-            .AsQueryable();
+        IQueryable<Domain.Entities.Employee> query = _unitOfWork.Employees.Query();
+
+        if (request.IncludeInactive)
+        {
+            query = query.IgnoreQueryFilters();
+        }
+
+        query = query.Include(e => e.User);
+
+        if (!request.IncludeInactive)
+        {
+            query = query.Where(e => e.User.IsActive);
+        }
 
         if (!string.IsNullOrWhiteSpace(request.Search))
         {
@@ -34,7 +45,7 @@ public class GetEmployeesQueryHandler : IRequestHandler<GetEmployeesQuery, Resul
             query = query.Where(e =>
                 e.User.FullName.ToLower().Contains(search) ||
                 e.User.Email.ToLower().Contains(search) ||
-                e.User.EmployeeCode.ToLower().Contains(search));
+                e.EmployeeCode.ToLower().Contains(search));
         }
 
         if (!string.IsNullOrWhiteSpace(request.Department))
@@ -47,7 +58,7 @@ public class GetEmployeesQueryHandler : IRequestHandler<GetEmployeesQuery, Resul
             .Skip((request.PageNumber - 1) * request.PageSize)
             .Take(request.PageSize)
             .Select(e => new EmployeeListDto(
-                e.Id, e.User.EmployeeCode, e.User.FullName, e.User.Email,
+                e.Id, e.EmployeeCode, e.User.FullName, e.User.Email, e.User.PhoneNumber,
                 e.User.Role.ToString(), e.Department, e.Position, e.User.IsActive))
             .ToListAsync(cancellationToken);
 
