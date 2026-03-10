@@ -12,11 +12,11 @@ public record GetEmployeeByIdQuery(Guid EmployeeId) : IRequest<Result<EmployeeDe
 public record EmployeeDetailDto(
     Guid Id, Guid UserId, string EmployeeCode, string FullName, string Email,
     string? PhoneNumber, string Role, string? Department, string? Position,
-    string? Skills, string? Address, DateTime? DateOfBirth, DateTime HireDate,
+    string? Skills, DateTime? DateOfBirth, DateTime HireDate,
     bool IsActive, DateTime CreatedAt,
-    string? NationalId, string? Nationality, string? Gender, string? MaritalStatus,
+    string? NationalId, string? Nationality, int? Gender, int? MaritalStatus,
     string? PermanentAddress, string? TemporaryAddress, string? TaxCode,
-    string? BankAccountNumber, string? BankName, string? BloodType,
+    string? BankAccountNumber, string? BankName, string? BankAccountHolderName, string? BloodType,
     string? EmergencyContactName, string? EmergencyContactPhone,
     string? EmergencyContactRelationship, string? ProfilePhotoUrl);
 
@@ -46,15 +46,16 @@ public class GetEmployeeByIdQueryHandler : IRequestHandler<GetEmployeeByIdQuery,
             return Result<EmployeeDetailDto>.Failure("Employee not found");
 
         var dto = new EmployeeDetailDto(
-            employee.Id, employee.UserId, employee.User.EmployeeCode,
+            employee.Id, employee.UserId, employee.EmployeeCode,
             employee.User.FullName, employee.User.Email, employee.User.PhoneNumber,
             employee.User.Role.ToString(), employee.Department, employee.Position,
-            employee.Skills, employee.Address, employee.DateOfBirth, employee.HireDate,
+            employee.Skills, employee.DateOfBirth, employee.HireDate,
             employee.User.IsActive, employee.CreatedAt,
             employee.NationalId, employee.Nationality,
-            employee.Gender?.ToString(), employee.MaritalStatus?.ToString(),
+            employee.Gender.HasValue ? (int)employee.Gender.Value : null,
+            employee.MaritalStatus.HasValue ? (int)employee.MaritalStatus.Value : null,
             employee.PermanentAddress, employee.TemporaryAddress, employee.TaxCode,
-            employee.BankAccountNumber, employee.BankName, employee.BloodType,
+            employee.BankAccountNumber, employee.BankName, employee.BankAccountHolderName, employee.BloodType,
             employee.EmergencyContactName, employee.EmergencyContactPhone,
             employee.EmergencyContactRelationship, employee.ProfilePhotoUrl);
 
