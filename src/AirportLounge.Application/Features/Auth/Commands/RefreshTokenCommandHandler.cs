@@ -19,17 +19,15 @@ public class RefreshTokenCommandHandler : IRequestHandler<RefreshTokenCommand, R
 
     public async Task<Result<LoginResponse>> Handle(RefreshTokenCommand request, CancellationToken cancellationToken)
     {
-        var userId = _jwtService.ValidateAccessToken(request.AccessToken);
+        var user = await _unitOfWork.Users.Query()
+            .FirstOrDefaultAsync(u =>
+                u.RefreshToken == request.RefreshToken &&
+                u.IsActive,
+                cancellationToken);
 
-        var user = userId.HasValue
-            ? await _unitOfWork.Users.Query()
-                .FirstOrDefaultAsync(u => u.Id == userId.Value && u.IsActive, cancellationToken)
-            : null;
-
-        if (user is null || user.RefreshToken != request.RefreshToken ||
-            user.RefreshTokenExpiryTime <= DateTime.UtcNow)
+        if (user is null)
         {
-            return Result<LoginResponse>.Failure("Invalid or expired refresh token");
+            return Result<LoginResponse>.Failure("Invalid refresh token");
         }
 
         var newAccessToken = _jwtService.GenerateAccessToken(user.Id, user.Email, user.Role.ToString());
@@ -44,6 +42,6 @@ public class RefreshTokenCommandHandler : IRequestHandler<RefreshTokenCommand, R
             newAccessToken,
             newRefreshToken,
             DateTime.UtcNow.AddMinutes(60),
-            new UserDto(user.Id, user.EmployeeCode, user.FullName, user.Email, user.Role.ToString())));
+            new UserDto(user.Id, user.FullName, user.Email, user.Role.ToString())));
     }
 }
