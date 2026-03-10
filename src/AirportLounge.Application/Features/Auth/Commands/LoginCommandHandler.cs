@@ -43,7 +43,7 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, Result<LoginRes
             accessToken,
             refreshToken,
             DateTime.UtcNow.AddMinutes(60),
-            new UserDto(user.Id, user.EmployeeCode, user.FullName, user.Email, user.Role.ToString()));
+            new UserDto(user.Id,user.FullName, user.Email, user.Role.ToString()));
 
         return Result<LoginResponse>.Success(response, "Login successful");
     }
