@@ -46,11 +46,46 @@ public class TasksController : ControllerBase
     public async Task<IActionResult> GetAll(
         [FromQuery] TaskItemStatus? status, [FromQuery] Guid? assignedToId,
         [FromQuery] TaskPriority? priority,
+        [FromQuery] string? search,
         [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 20)
     {
         var result = await _mediator.Send(
-            new GetTasksQuery(status, assignedToId, priority, pageNumber, pageSize));
+            new GetTasksQuery(status, assignedToId, priority, search, pageNumber, pageSize));
         return Ok(result);
+    }
+
+    [HttpPut("{id:guid}")]
+    [Authorize(Roles = "Admin,Manager")]
+    [ProducesResponseType(typeof(Result<bool>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> Update(Guid id, [FromBody] UpdateTaskCommand command)
+    {
+        if (id != command.TaskId) return BadRequest("ID mismatch");
+        var result = await _mediator.Send(command);
+        return result.IsSuccess ? Ok(result) : BadRequest(result);
+    }
+
+    [HttpDelete("{id:guid}")]
+    [Authorize(Roles = "Admin,Manager")]
+    [ProducesResponseType(typeof(Result<bool>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> Delete(Guid id)
+    {
+        var result = await _mediator.Send(new DeleteTaskCommand(id));
+        return result.IsSuccess ? Ok(result) : BadRequest(result);
+    }
+
+    [HttpPost("batch-delete")]
+    [Authorize(Roles = "Admin,Manager")]
+    [ProducesResponseType(typeof(Result<int>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> DeleteBatch([FromBody] IReadOnlyList<Guid> ids)
+    {
+        if (ids is null || ids.Count == 0)
+            return BadRequest("No IDs provided");
+
+        var result = await _mediator.Send(new DeleteTasksBatchCommand(ids));
+        return result.IsSuccess ? Ok(result) : BadRequest(result);
     }
 
     [HttpGet("export")]
