@@ -33,7 +33,7 @@ public class UpdateEmployeeCommandHandler : IRequestHandler<UpdateEmployeeComman
         var oldValues = System.Text.Json.JsonSerializer.Serialize(new
         {
             employee.User.FullName, employee.User.PhoneNumber,
-            employee.Department, employee.Position, employee.Skills, employee.Address
+            employee.Department, employee.Position, employee.Skills
         });
 
         employee.User.FullName = request.FullName;
@@ -42,7 +42,10 @@ public class UpdateEmployeeCommandHandler : IRequestHandler<UpdateEmployeeComman
         employee.Department = request.Department;
         employee.Position = request.Position;
         employee.Skills = request.Skills;
-        employee.Address = request.Address;
+        if (request.HireDate.HasValue)
+        {
+            employee.HireDate = request.HireDate.Value;
+        }
         employee.DateOfBirth = request.DateOfBirth;
         employee.NationalId = request.NationalId;
         employee.Nationality = request.Nationality;
@@ -53,6 +56,7 @@ public class UpdateEmployeeCommandHandler : IRequestHandler<UpdateEmployeeComman
         employee.TaxCode = request.TaxCode;
         employee.BankAccountNumber = request.BankAccountNumber;
         employee.BankName = request.BankName;
+        employee.BankAccountHolderName = request.BankAccountHolderName;
         employee.BloodType = request.BloodType;
         employee.EmergencyContactName = request.EmergencyContactName;
         employee.EmergencyContactPhone = request.EmergencyContactPhone;
@@ -71,7 +75,7 @@ public class UpdateEmployeeCommandHandler : IRequestHandler<UpdateEmployeeComman
             NewValues = System.Text.Json.JsonSerializer.Serialize(new
             {
                 request.FullName, request.PhoneNumber,
-                request.Department, request.Position, request.Skills, request.Address
+                request.Department, request.Position, request.Skills
             }),
             PerformedBy = _currentUser.Email ?? "System",
             PerformedAt = DateTime.UtcNow
