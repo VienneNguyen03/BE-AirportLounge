@@ -44,10 +44,11 @@ public class AttendanceController : ControllerBase
     public async Task<IActionResult> GetReport(
         [FromQuery] DateTime startDate, [FromQuery] DateTime endDate,
         [FromQuery] Guid? employeeId, [FromQuery] AttendanceStatus? status,
+        [FromQuery] string? search,
         [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 20)
     {
         var result = await _mediator.Send(
-            new GetAttendanceReportQuery(startDate, endDate, employeeId, status, pageNumber, pageSize));
+            new GetAttendanceReportQuery(startDate, endDate, employeeId, status, search, pageNumber, pageSize));
         return Ok(result);
     }
 
