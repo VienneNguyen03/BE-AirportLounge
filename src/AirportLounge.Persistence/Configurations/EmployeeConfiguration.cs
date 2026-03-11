@@ -16,9 +16,17 @@ public class EmployeeConfiguration : IEntityTypeConfiguration<Employee>
             .IsUnique()
             .HasFilter("\"IsDeleted\" = false");
 
-        builder.Property(e => e.Department).HasMaxLength(100);
-        builder.Property(e => e.Position).HasMaxLength(100);
-        builder.Property(e => e.Skills).HasMaxLength(500);
+        builder.HasOne(e => e.Department)
+            .WithMany(d => d.Employees)
+            .HasForeignKey(e => e.DepartmentId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        builder.HasOne(e => e.Position)
+            .WithMany(p => p.Employees)
+            .HasForeignKey(e => e.PositionId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        builder.Property(e => e.Skills).HasMaxLength(1000);
 
         builder.Property(e => e.NationalId).HasMaxLength(50);
         builder.Property(e => e.Nationality).HasMaxLength(100);
