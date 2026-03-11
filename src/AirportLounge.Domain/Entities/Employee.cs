@@ -7,8 +7,8 @@ public class Employee : AuditableEntity
 {
     public Guid UserId { get; set; }
     public string EmployeeCode { get; set; } = string.Empty;
-    public string? Department { get; set; }
-    public string? Position { get; set; }
+    public Guid? DepartmentId { get; set; }
+    public Guid? PositionId { get; set; }
     public string? Skills { get; set; }
     public DateTime? DateOfBirth { get; set; }
     public DateTime HireDate { get; set; }
@@ -30,6 +30,8 @@ public class Employee : AuditableEntity
 
     // Navigation
     public User User { get; set; } = null!;
+    public Department? Department { get; set; }
+    public Position? Position { get; set; }
     public ICollection<ShiftAssignment> ShiftAssignments { get; set; } = new List<ShiftAssignment>();
     public ICollection<Attendance> Attendances { get; set; } = new List<Attendance>();
     public ICollection<TaskItem> AssignedTasks { get; set; } = new List<TaskItem>();
