@@ -32,7 +32,10 @@ public class GetEmployeesQueryHandler : IRequestHandler<GetEmployeesQuery, Resul
             query = query.IgnoreQueryFilters();
         }
 
-        query = query.Include(e => e.User);
+        query = query
+            .Include(e => e.User)
+            .Include(e => e.Department)
+            .Include(e => e.Position);
 
         if (!request.IncludeInactive)
         {
@@ -49,7 +52,7 @@ public class GetEmployeesQueryHandler : IRequestHandler<GetEmployeesQuery, Resul
         }
 
         if (!string.IsNullOrWhiteSpace(request.Department))
-            query = query.Where(e => e.Department == request.Department);
+            query = query.Where(e => e.Department != null && e.Department.Name == request.Department);
 
         var totalCount = await query.CountAsync(cancellationToken);
 
@@ -59,7 +62,7 @@ public class GetEmployeesQueryHandler : IRequestHandler<GetEmployeesQuery, Resul
             .Take(request.PageSize)
             .Select(e => new EmployeeListDto(
                 e.Id, e.EmployeeCode, e.User.FullName, e.User.Email, e.User.PhoneNumber,
-                e.User.Role.ToString(), e.Department, e.Position, e.User.IsActive))
+                e.User.Role.ToString(), e.Department != null ? e.Department.Name : null, e.Position != null ? e.Position.Name : null, e.User.IsActive))
             .ToListAsync(cancellationToken);
 
         return Result<PaginatedList<EmployeeListDto>>.Success(
