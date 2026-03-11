@@ -13,6 +13,8 @@ public class OffboardingProcessConfiguration : IEntityTypeConfiguration<Offboard
 
         builder.Property(e => e.Status).HasConversion<int>();
         builder.Property(e => e.Reason).HasMaxLength(1000);
+        builder.Property(e => e.Notes).HasMaxLength(2000);
+        builder.Property(e => e.RowVersion).IsRowVersion();
 
         builder.HasOne(e => e.Employee).WithMany()
             .HasForeignKey(e => e.EmployeeId).OnDelete(DeleteBehavior.Cascade);
