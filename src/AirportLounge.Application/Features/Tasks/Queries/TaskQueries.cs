@@ -1,3 +1,5 @@
+using AirportLounge.Application.Common;
+using AirportLounge.Application.Common.Interfaces;
 using AirportLounge.Application.Common.Models;
 using AirportLounge.Domain.Enums;
 using AirportLounge.Domain.Interfaces;
@@ -19,40 +21,59 @@ public record TaskDto(
 public class GetTasksQueryHandler : IRequestHandler<GetTasksQuery, Result<PaginatedList<TaskDto>>>
 {
     private readonly IUnitOfWork _uow;
-    public GetTasksQueryHandler(IUnitOfWork uow) => _uow = uow;
+    private readonly ICacheService _cache;
+
+    public GetTasksQueryHandler(IUnitOfWork uow, ICacheService cache)
+    {
+        _uow = uow;
+        _cache = cache;
+    }
 
     public async Task<Result<PaginatedList<TaskDto>>> Handle(GetTasksQuery req, CancellationToken ct)
     {
-        var query = _uow.TaskItems.Query()
-            .Include(t => t.AssignedTo).ThenInclude(e => e!.User)
-            .Include(t => t.LoungeZone)
-            .AsQueryable();
+        var cacheKey = CacheKeys.TasksList(
+            req.Status?.ToString(),
+            req.AssignedToId,
+            req.Priority?.ToString(),
+            req.Search,
+            req.PageNumber);
 
-        if (req.Status.HasValue) query = query.Where(t => t.Status == req.Status.Value);
-        if (req.AssignedToId.HasValue) query = query.Where(t => t.AssignedToId == req.AssignedToId.Value);
-        if (req.Priority.HasValue) query = query.Where(t => t.Priority == req.Priority.Value);
-        if (!string.IsNullOrWhiteSpace(req.Search))
+        var cached = await _cache.GetAsync<PaginatedList<TaskDto>>(cacheKey, ct);
+        if (cached is null)
         {
-            var search = req.Search.ToLower();
-            query = query.Where(t =>
-                t.Title.ToLower().Contains(search) ||
-                (t.Description != null && t.Description.ToLower().Contains(search)));
+            var query = _uow.TaskItems.Query()
+                .Include(t => t.AssignedTo).ThenInclude(e => e!.User)
+                .Include(t => t.LoungeZone)
+                .AsQueryable();
+
+            if (req.Status.HasValue) query = query.Where(t => t.Status == req.Status.Value);
+            if (req.AssignedToId.HasValue) query = query.Where(t => t.AssignedToId == req.AssignedToId.Value);
+            if (req.Priority.HasValue) query = query.Where(t => t.Priority == req.Priority.Value);
+            if (!string.IsNullOrWhiteSpace(req.Search))
+            {
+                var search = req.Search.ToLower();
+                query = query.Where(t =>
+                    t.Title.ToLower().Contains(search) ||
+                    (t.Description != null && t.Description.ToLower().Contains(search)));
+            }
+
+            var total = await query.CountAsync(ct);
+            var items = await query
+                .OrderByDescending(t => t.Priority).ThenByDescending(t => t.CreatedAt)
+                .Skip((req.PageNumber - 1) * req.PageSize).Take(req.PageSize)
+                .Select(t => new TaskDto(
+                    t.Id, t.Title, t.Description, t.Priority.ToString(), t.Status.ToString(),
+                    t.AssignedToId,
+                    t.AssignedTo != null ? t.AssignedTo.User.FullName : null,
+                    t.LoungeZone != null ? t.LoungeZone.Name : null,
+                    t.DueDate, t.CompletedAt, t.CreatedAt))
+                .ToListAsync(ct);
+
+            cached = new PaginatedList<TaskDto>(items, total, req.PageNumber, req.PageSize);
+            await _cache.SetAsync(cacheKey, cached, CacheKeys.TasksTtl, ct);
         }
 
-        var total = await query.CountAsync(ct);
-        var items = await query
-            .OrderByDescending(t => t.Priority).ThenByDescending(t => t.CreatedAt)
-            .Skip((req.PageNumber - 1) * req.PageSize).Take(req.PageSize)
-            .Select(t => new TaskDto(
-                t.Id, t.Title, t.Description, t.Priority.ToString(), t.Status.ToString(),
-                t.AssignedToId,
-                t.AssignedTo != null ? t.AssignedTo.User.FullName : null,
-                t.LoungeZone != null ? t.LoungeZone.Name : null,
-                t.DueDate, t.CompletedAt, t.CreatedAt))
-            .ToListAsync(ct);
-
-        return Result<PaginatedList<TaskDto>>.Success(
-            new PaginatedList<TaskDto>(items, total, req.PageNumber, req.PageSize));
+        return Result<PaginatedList<TaskDto>>.Success(cached);
     }
 }
 
