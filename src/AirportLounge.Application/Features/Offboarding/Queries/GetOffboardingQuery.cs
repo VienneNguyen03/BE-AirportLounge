@@ -8,10 +8,15 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AirportLounge.Application.Features.Offboarding.Queries;
 
+public record OffboardingTaskDto(
+    Guid Id, string Title, string? Description, string? Category,
+    bool IsCompleted, DateTime? CompletedAt, int SortOrder);
+
 public record OffboardingDto(
     Guid Id, Guid EmployeeId, string EmployeeName, OffboardingStatus Status,
     DateTime ResignationDate, DateTime LastWorkingDate, string? Reason,
-    bool ExitSurveyCompleted, bool AssetReturned, bool AccessRevoked);
+    bool ExitSurveyCompleted, bool AssetReturned, bool AccessRevoked,
+    List<OffboardingTaskDto> Tasks);
 
 public record GetOffboardingQuery(Guid EmployeeId) : IRequest<Result<OffboardingDto>>;
 
@@ -35,6 +40,7 @@ public class GetOffboardingQueryHandler : IRequestHandler<GetOffboardingQuery, R
 
         var process = await _uow.OffboardingProcesses.Query()
             .Include(o => o.Employee).ThenInclude(e => e.User)
+            .Include(o => o.Tasks)
             .Where(o => o.EmployeeId == req.EmployeeId)
             .OrderByDescending(o => o.CreatedAt)
             .FirstOrDefaultAsync(ct);
@@ -52,7 +58,11 @@ public class GetOffboardingQueryHandler : IRequestHandler<GetOffboardingQuery, R
             process.Reason,
             process.ExitSurveyCompleted,
             process.AssetReturned,
-            process.AccessRevoked);
+            process.AccessRevoked,
+            process.Tasks.OrderBy(t => t.SortOrder).Select(t => new OffboardingTaskDto(
+                t.Id, t.Title, t.Description, t.Category,
+                t.IsCompleted, t.CompletedAt, t.SortOrder
+            )).ToList());
 
         await _cache.SetAsync(cacheKey, dto, CacheKeys.OnboardingTtl, ct);
         return Result<OffboardingDto>.Success(dto);
