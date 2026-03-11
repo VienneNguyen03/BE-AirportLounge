@@ -1,3 +1,4 @@
+using AirportLounge.Application.Common;
 using AirportLounge.Application.Common.Interfaces;
 using AirportLounge.Application.Common.Models;
 using AirportLounge.Domain.Entities;
@@ -43,15 +44,17 @@ public class AssignShiftCommandHandler : IRequestHandler<AssignShiftCommand, Res
     private readonly IUnitOfWork _uow;
     private readonly ICurrentUserService _currentUser;
     private readonly INotificationService _notifications;
+    private readonly ICacheService _cache;
 
-    public AssignShiftCommandHandler(IUnitOfWork uow, ICurrentUserService currentUser, INotificationService notifications)
-    { _uow = uow; _currentUser = currentUser; _notifications = notifications; }
+    public AssignShiftCommandHandler(IUnitOfWork uow, ICurrentUserService currentUser, INotificationService notifications, ICacheService cache)
+    { _uow = uow; _currentUser = currentUser; _notifications = notifications; _cache = cache; }
 
     public async Task<Result<Guid>> Handle(AssignShiftCommand req, CancellationToken ct)
     {
         var result = await AssignInternalAsync(req, ct);
         if (!result.IsSuccess) return result;
 
+        await _cache.RemoveByPrefixAsync(CacheKeys.ShiftsPrefix, ct);
         return Result<Guid>.Success(result.Data, "Shift assigned");
     }
 
@@ -169,11 +172,13 @@ public class UpdateShiftAssignmentCommandHandler : IRequestHandler<UpdateShiftAs
 {
     private readonly IUnitOfWork _uow;
     private readonly ICurrentUserService _currentUser;
+    private readonly ICacheService _cache;
 
-    public UpdateShiftAssignmentCommandHandler(IUnitOfWork uow, ICurrentUserService currentUser)
+    public UpdateShiftAssignmentCommandHandler(IUnitOfWork uow, ICurrentUserService currentUser, ICacheService cache)
     {
         _uow = uow;
         _currentUser = currentUser;
+        _cache = cache;
     }
 
     public async Task<Result<bool>> Handle(UpdateShiftAssignmentCommand req, CancellationToken ct)
@@ -217,6 +222,8 @@ public class UpdateShiftAssignmentCommandHandler : IRequestHandler<UpdateShiftAs
 
         _uow.ShiftAssignments.Update(assignment);
         await _uow.SaveChangesAsync(ct);
+
+        await _cache.RemoveByPrefixAsync(CacheKeys.ShiftsPrefix, ct);
 
         return Result<bool>.Success(true, "Shift assignment updated");
     }
@@ -282,8 +289,13 @@ public record UnassignShiftCommand(Guid AssignmentId) : IRequest<Result<bool>>;
 public class UnassignShiftCommandHandler : IRequestHandler<UnassignShiftCommand, Result<bool>>
 {
     private readonly IUnitOfWork _uow;
+    private readonly ICacheService _cache;
 
-    public UnassignShiftCommandHandler(IUnitOfWork uow) => _uow = uow;
+    public UnassignShiftCommandHandler(IUnitOfWork uow, ICacheService cache)
+    {
+        _uow = uow;
+        _cache = cache;
+    }
 
     public async Task<Result<bool>> Handle(UnassignShiftCommand req, CancellationToken ct)
     {
@@ -293,6 +305,9 @@ public class UnassignShiftCommandHandler : IRequestHandler<UnassignShiftCommand,
         assignment.IsDeleted = true;
         _uow.ShiftAssignments.Update(assignment);
         await _uow.SaveChangesAsync(ct);
+        
+        await _cache.RemoveByPrefixAsync(CacheKeys.ShiftsPrefix, ct);
+        
         return Result<bool>.Success(true, "Shift unassigned");
     }
 }
