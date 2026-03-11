@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AirportLounge.Application.Features.Leaves.Queries;
 
-public record GetLeaveTypesQuery : IRequest<Result<List<LeaveTypeDto>>>;
+public record GetLeaveTypesQuery(int PageNumber = 1, int PageSize = 10) : IRequest<Result<PaginatedList<LeaveTypeDto>>>;
 
 public record LeaveTypeDto(
     Guid Id,
@@ -17,7 +17,7 @@ public record LeaveTypeDto(
     bool RequiresDocumentation,
     bool IsActive);
 
-public class GetLeaveTypesQueryHandler : IRequestHandler<GetLeaveTypesQuery, Result<List<LeaveTypeDto>>>
+public class GetLeaveTypesQueryHandler : IRequestHandler<GetLeaveTypesQuery, Result<PaginatedList<LeaveTypeDto>>>
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICacheService _cache;
@@ -28,26 +28,39 @@ public class GetLeaveTypesQueryHandler : IRequestHandler<GetLeaveTypesQuery, Res
         _cache = cache;
     }
 
-    public async Task<Result<List<LeaveTypeDto>>> Handle(GetLeaveTypesQuery request, CancellationToken cancellationToken)
+    public async Task<Result<PaginatedList<LeaveTypeDto>>> Handle(GetLeaveTypesQuery request, CancellationToken cancellationToken)
     {
-        var cached = await _cache.GetAsync<List<LeaveTypeDto>>(CacheKeys.LeaveTypesList, cancellationToken);
+        var cacheKey = CacheKeys.LeaveTypesList;
+        var cached = await _cache.GetAsync<List<LeaveTypeDto>>(cacheKey, cancellationToken);
+        
+        List<LeaveTypeDto> allTypes;
         if (cached is not null)
-            return Result<List<LeaveTypeDto>>.Success(cached);
+        {
+            allTypes = cached;
+        }
+        else
+        {
+            allTypes = await _unitOfWork.LeaveTypes.Query()
+                .Where(lt => !lt.IsDeleted)
+                .OrderBy(lt => lt.Name)
+                .Select(lt => new LeaveTypeDto(
+                    lt.Id,
+                    lt.Name,
+                    lt.Description,
+                    lt.DefaultDaysPerYear,
+                    lt.RequiresDocumentation,
+                    lt.IsActive))
+                .ToListAsync(cancellationToken);
+            await _cache.SetAsync(cacheKey, allTypes, TimeSpan.FromHours(24), cancellationToken);
+        }
 
-        var leaveTypes = await _unitOfWork.LeaveTypes.Query()
-            .Where(lt => lt.IsActive && !lt.IsDeleted)
-            .OrderBy(lt => lt.Name)
-            .Select(lt => new LeaveTypeDto(
-                lt.Id,
-                lt.Name,
-                lt.Description,
-                lt.DefaultDaysPerYear,
-                lt.RequiresDocumentation,
-                lt.IsActive))
-            .ToListAsync(cancellationToken);
+        var totalCount = allTypes.Count;
+        var items = allTypes
+            .Skip((request.PageNumber - 1) * request.PageSize)
+            .Take(request.PageSize)
+            .ToList();
 
-        await _cache.SetAsync(CacheKeys.LeaveTypesList, leaveTypes, CacheKeys.LeaveTypesTtl, cancellationToken);
-
-        return Result<List<LeaveTypeDto>>.Success(leaveTypes);
+        return Result<PaginatedList<LeaveTypeDto>>.Success(
+            new PaginatedList<LeaveTypeDto>(items, totalCount, request.PageNumber, request.PageSize));
     }
 }
