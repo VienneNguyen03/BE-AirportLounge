@@ -13,6 +13,7 @@ public class LeaveBalanceConfiguration : IEntityTypeConfiguration<LeaveBalance>
 
         builder.Property(e => e.TotalDays).HasPrecision(5, 1);
         builder.Property(e => e.UsedDays).HasPrecision(5, 1);
+        builder.Property(e => e.ReservedDays).HasPrecision(5, 1);
         builder.Ignore(e => e.RemainingDays);
 
         builder.HasIndex(e => new { e.EmployeeId, e.LeaveTypeId, e.Year }).IsUnique();
