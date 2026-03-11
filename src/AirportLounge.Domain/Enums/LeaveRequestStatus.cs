@@ -2,8 +2,13 @@ namespace AirportLounge.Domain.Enums;
 
 public enum LeaveRequestStatus
 {
-    Pending = 0,
-    Approved = 1,
-    Rejected = 2,
-    Cancelled = 3
+    Draft = 0,
+    Submitted = 1,
+    UnderReview = 2,
+    NeedsInfo = 3,
+    Approved = 4,
+    Scheduled = 5,
+    Rejected = 6,
+    Cancelled = 7,
+    Taken = 8
 }
