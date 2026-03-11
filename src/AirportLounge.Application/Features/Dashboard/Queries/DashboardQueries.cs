@@ -85,7 +85,7 @@ public class GetStaffDashboardQueryHandler : IRequestHandler<GetStaffDashboardQu
                   (te.Status == EnrollmentStatus.Enrolled || te.Status == EnrollmentStatus.InProgress), ct);
 
         var latestReview = await _uow.PerformanceReviews.Query()
-            .Where(r => r.EmployeeId == req.EmployeeId && r.Status == ReviewStatus.Completed)
+            .Where(r => r.EmployeeId == req.EmployeeId && r.Status == ReviewStatus.Finalized)
             .OrderByDescending(r => r.ReviewDate)
             .Select(r => r.OverallScore)
             .FirstOrDefaultAsync(ct);
@@ -135,7 +135,7 @@ public class GetManagerDashboardQueryHandler : IRequestHandler<GetManagerDashboa
         var inProgressTasks = await _uow.TaskItems.CountAsync(t => t.Status == TaskItemStatus.InProgress, ct);
 
         var pendingLeave = await _uow.LeaveRequests.CountAsync(
-            lr => lr.Status == LeaveRequestStatus.Pending, ct);
+            lr => lr.Status == LeaveRequestStatus.Submitted || lr.Status == LeaveRequestStatus.UnderReview || lr.Status == LeaveRequestStatus.NeedsInfo, ct);
         var activeOnboardings = await _uow.OnboardingProcesses.CountAsync(
             o => o.Status == OnboardingStatus.InProgress, ct);
 
@@ -190,7 +190,7 @@ public class GetAdminDashboardQueryHandler : IRequestHandler<GetAdminDashboardQu
             .ToDictionaryAsync(x => x.Role, x => x.Count, ct);
 
         var pendingLeave = await _uow.LeaveRequests.CountAsync(
-            lr => lr.Status == LeaveRequestStatus.Pending, ct);
+            lr => lr.Status == LeaveRequestStatus.Submitted || lr.Status == LeaveRequestStatus.UnderReview || lr.Status == LeaveRequestStatus.NeedsInfo, ct);
         var activeOnboardings = await _uow.OnboardingProcesses.CountAsync(
             o => o.Status == OnboardingStatus.InProgress, ct);
         var activeOffboardings = await _uow.OffboardingProcesses.CountAsync(
