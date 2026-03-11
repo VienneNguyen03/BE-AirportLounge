@@ -51,8 +51,8 @@ public class CreateEmployeeCommandHandler : IRequestHandler<CreateEmployeeComman
         {
             UserId = user.Id,
             EmployeeCode = request.EmployeeCode,
-            Department = request.Department,
-            Position = request.Position,
+            DepartmentId = request.DepartmentId,
+            PositionId = request.PositionId,
             Skills = request.Skills,
             HireDate = request.HireDate,
             DateOfBirth = request.DateOfBirth,
