@@ -10,6 +10,7 @@ namespace AirportLounge.Application.Features.Performance.Commands;
 public record CompleteReviewCommand(
     Guid ReviewId,
     string ManagerAssessment,
+    decimal ManagerScore,
     decimal OverallScore,
     string? ImprovementPlan) : IRequest<Result<bool>>;
 
@@ -36,9 +37,10 @@ public class CompleteReviewCommandHandler : IRequestHandler<CompleteReviewComman
             return Result<bool>.Failure("Review is not in Manager Review state");
 
         review.ManagerAssessment = request.ManagerAssessment;
+        review.ManagerScore = request.ManagerScore;
         review.OverallScore = request.OverallScore;
         review.ImprovementPlan = request.ImprovementPlan;
-        review.Status = ReviewStatus.Completed;
+        review.Status = ReviewStatus.ManagerSubmitted;
         review.ReviewDate = DateTime.UtcNow;
         review.UpdatedBy = _currentUser.Email;
 
@@ -47,6 +49,6 @@ public class CompleteReviewCommandHandler : IRequestHandler<CompleteReviewComman
 
         await _cache.RemoveAsync(CacheKeys.PerformanceReviews(review.EmployeeId), ct);
 
-        return Result<bool>.Success(true, "Review completed");
+        return Result<bool>.Success(true, "Manager review submitted");
     }
 }
