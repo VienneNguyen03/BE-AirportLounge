@@ -2,17 +2,19 @@ using AirportLounge.Application.Common;
 using AirportLounge.Application.Common.Interfaces;
 using AirportLounge.Application.Common.Models;
 using AirportLounge.Domain.Entities;
+using AirportLounge.Domain.Enums;
 using AirportLounge.Domain.Interfaces;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace AirportLounge.Application.Features.Onboarding.Commands;
 
-public record OnboardingTaskInput(string Title, string? Description, Guid? AssignedToId, DateTime? DueDate, int SortOrder);
+public record OnboardingTaskInput(string Title, string? Description, string? Category, Guid? AssignedToId, DateTime? DueDate, int SortOrder);
 
 public record CreateOnboardingCommand(
     Guid EmployeeId,
     Guid? AssignedMentorId,
+    DateTime? DueDate,
     List<OnboardingTaskInput> Tasks) : IRequest<Result<Guid>>;
 
 public class CreateOnboardingCommandHandler : IRequestHandler<CreateOnboardingCommand, Result<Guid>>
@@ -35,7 +37,7 @@ public class CreateOnboardingCommandHandler : IRequestHandler<CreateOnboardingCo
             return Result<Guid>.Failure("Employee not found");
 
         var alreadyExists = await _uow.OnboardingProcesses.Query()
-            .AnyAsync(o => o.EmployeeId == req.EmployeeId && o.Status == Domain.Enums.OnboardingStatus.InProgress, ct);
+            .AnyAsync(o => o.EmployeeId == req.EmployeeId && o.Status != OnboardingStatus.Completed && o.Status != OnboardingStatus.Activated, ct);
         if (alreadyExists)
             return Result<Guid>.Failure("Employee already has an active onboarding process");
 
@@ -43,7 +45,9 @@ public class CreateOnboardingCommandHandler : IRequestHandler<CreateOnboardingCo
         {
             EmployeeId = req.EmployeeId,
             StartDate = DateTime.UtcNow,
+            DueDate = req.DueDate,
             AssignedMentorId = req.AssignedMentorId,
+            Status = OnboardingStatus.Created,
             CreatedBy = _currentUser.Email
         };
 
@@ -56,6 +60,7 @@ public class CreateOnboardingCommandHandler : IRequestHandler<CreateOnboardingCo
                 ProcessId = process.Id,
                 Title = t.Title,
                 Description = t.Description,
+                Category = t.Category,
                 AssignedToId = t.AssignedToId,
                 DueDate = t.DueDate,
                 SortOrder = t.SortOrder,
