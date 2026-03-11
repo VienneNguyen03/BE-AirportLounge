@@ -35,11 +35,16 @@ public class CompleteOnboardingTaskCommandHandler : IRequestHandler<CompleteOnbo
         if (task.IsCompleted)
             return Result<bool>.Failure("Task is already completed");
 
+        // Guard: process must be InProgress
+        if (task.Process.Status != OnboardingStatus.InProgress)
+            return Result<bool>.Failure($"Cannot complete tasks when process is '{task.Process.Status}'");
+
         task.IsCompleted = true;
         task.CompletedAt = DateTime.UtcNow;
         task.UpdatedBy = _currentUser.Email;
         _uow.OnboardingTasks.Update(task);
 
+        // Auto-complete: if all tasks done → mark process Completed
         var allCompleted = await _uow.OnboardingTasks.Query()
             .Where(t => t.ProcessId == task.ProcessId && t.Id != req.TaskId)
             .AllAsync(t => t.IsCompleted, ct);
