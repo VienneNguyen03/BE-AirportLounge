@@ -20,7 +20,9 @@ public record PendingLeaveRequestDto(
     DateTime StartDate,
     DateTime EndDate,
     decimal TotalDays,
+    bool IsHalfDay,
     string? Reason,
+    LeaveRequestStatus Status,
     DateTime SubmittedAt);
 
 public class GetPendingLeaveRequestsQueryHandler
@@ -48,22 +50,33 @@ public class GetPendingLeaveRequestsQueryHandler
         if (cached is not null)
             return Result<List<PendingLeaveRequestDto>>.Success(cached);
 
+        // Show Submitted and UnderReview requests to managers
+        var pendingStatuses = new[]
+        {
+            LeaveRequestStatus.Submitted,
+            LeaveRequestStatus.UnderReview,
+            LeaveRequestStatus.NeedsInfo
+        };
+
         var pendingRequests = await _unitOfWork.LeaveRequests.Query()
             .Include(lr => lr.Employee).ThenInclude(e => e.User)
+            .Include(lr => lr.Employee).ThenInclude(e => e.Department)
             .Include(lr => lr.LeaveType)
-            .Where(lr => lr.Status == LeaveRequestStatus.Pending && !lr.IsDeleted)
+            .Where(lr => pendingStatuses.Contains(lr.Status) && !lr.IsDeleted)
             .OrderBy(lr => lr.StartDate)
             .Select(lr => new PendingLeaveRequestDto(
                 lr.Id,
                 lr.EmployeeId,
                 lr.Employee.User.FullName,
-                lr.Employee.Department,
+                lr.Employee.Department != null ? lr.Employee.Department.Name : null,
                 lr.LeaveTypeId,
                 lr.LeaveType.Name,
                 lr.StartDate,
                 lr.EndDate,
                 lr.TotalDays,
+                lr.IsHalfDay,
                 lr.Reason,
+                lr.Status,
                 lr.CreatedAt))
             .ToListAsync(cancellationToken);
 
