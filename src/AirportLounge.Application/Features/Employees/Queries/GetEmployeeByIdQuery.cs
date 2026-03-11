@@ -40,6 +40,8 @@ public class GetEmployeeByIdQueryHandler : IRequestHandler<GetEmployeeByIdQuery,
 
         var employee = await _unitOfWork.Employees.Query()
             .Include(e => e.User)
+            .Include(e => e.Department)
+            .Include(e => e.Position)
             .FirstOrDefaultAsync(e => e.Id == request.EmployeeId, cancellationToken);
 
         if (employee is null)
@@ -48,7 +50,7 @@ public class GetEmployeeByIdQueryHandler : IRequestHandler<GetEmployeeByIdQuery,
         var dto = new EmployeeDetailDto(
             employee.Id, employee.UserId, employee.EmployeeCode,
             employee.User.FullName, employee.User.Email, employee.User.PhoneNumber,
-            employee.User.Role.ToString(), employee.Department, employee.Position,
+            employee.User.Role.ToString(), employee.Department?.Name, employee.Position?.Name,
             employee.Skills, employee.DateOfBirth, employee.HireDate,
             employee.User.IsActive, employee.CreatedAt,
             employee.NationalId, employee.Nationality,
