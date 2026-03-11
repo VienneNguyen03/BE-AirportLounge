@@ -69,7 +69,7 @@ public class ConfigureLeaveBalanceCommandHandler : IRequestHandler<ConfigureLeav
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        await _cache.RemoveAsync(CacheKeys.LeaveBalance(request.EmployeeId, request.Year), cancellationToken);
+        await _cache.RemoveByPrefixAsync(CacheKeys.LeavesPrefix, cancellationToken);
 
         return Result<Guid>.Success(balance.Id, "Leave balance configured successfully");
     }
