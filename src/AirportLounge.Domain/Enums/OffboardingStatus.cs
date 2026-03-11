@@ -4,5 +4,8 @@ public enum OffboardingStatus
 {
     Initiated = 0,
     InProgress = 1,
-    Completed = 2
+    AssetRecovery = 2,
+    AccessRevocation = 3,
+    FinalSettlement = 4,
+    Completed = 5
 }
