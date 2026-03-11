@@ -1,3 +1,4 @@
+using AirportLounge.Application.Common;
 using AirportLounge.Application.Common.Interfaces;
 using AirportLounge.Application.Common.Models;
 using AirportLounge.Domain.Entities;
@@ -17,8 +18,9 @@ public class CheckInCommandHandler : IRequestHandler<CheckInCommand, Result<Chec
 {
     private readonly IUnitOfWork _uow;
     private static readonly int EarlyCheckinMinutes = 15;
+    private readonly ICacheService _cache;
 
-    public CheckInCommandHandler(IUnitOfWork uow) => _uow = uow;
+    public CheckInCommandHandler(IUnitOfWork uow, ICacheService cache) { _uow = uow; _cache = cache; }
 
     public async Task<Result<CheckInResponse>> Handle(CheckInCommand req, CancellationToken ct)
     {
@@ -57,6 +59,8 @@ public class CheckInCommandHandler : IRequestHandler<CheckInCommand, Result<Chec
         await _uow.Attendances.AddAsync(attendance, ct);
         await _uow.SaveChangesAsync(ct);
 
+        await _cache.RemoveByPrefixAsync(CacheKeys.AttendancePrefix, ct);
+
         var response = new CheckInResponse(attendance.Id, now, status.ToString(), assignment.Shift.Name);
         return Result<CheckInResponse>.Success(response, $"Checked in successfully ({status})");
     }
@@ -70,7 +74,9 @@ public record CheckOutResponse(Guid AttendanceId, DateTime CheckInTime, DateTime
 public class CheckOutCommandHandler : IRequestHandler<CheckOutCommand, Result<CheckOutResponse>>
 {
     private readonly IUnitOfWork _uow;
-    public CheckOutCommandHandler(IUnitOfWork uow) => _uow = uow;
+    private readonly ICacheService _cache;
+
+    public CheckOutCommandHandler(IUnitOfWork uow, ICacheService cache) { _uow = uow; _cache = cache; }
 
     public async Task<Result<CheckOutResponse>> Handle(CheckOutCommand req, CancellationToken ct)
     {
@@ -99,6 +105,8 @@ public class CheckOutCommandHandler : IRequestHandler<CheckOutCommand, Result<Ch
         _uow.Attendances.Update(attendance);
         await _uow.SaveChangesAsync(ct);
 
+        await _cache.RemoveByPrefixAsync(CacheKeys.AttendancePrefix, ct);
+
         var response = new CheckOutResponse(
             attendance.Id,
             attendance.CheckInTime!.Value,
@@ -123,8 +131,9 @@ public record UpdateAttendanceCommand(
 public class UpdateAttendanceCommandHandler : IRequestHandler<UpdateAttendanceCommand, Result<bool>>
 {
     private readonly IUnitOfWork _uow;
+    private readonly ICacheService _cache;
 
-    public UpdateAttendanceCommandHandler(IUnitOfWork uow) => _uow = uow;
+    public UpdateAttendanceCommandHandler(IUnitOfWork uow, ICacheService cache) { _uow = uow; _cache = cache; }
 
     public async Task<Result<bool>> Handle(UpdateAttendanceCommand req, CancellationToken ct)
     {
@@ -154,6 +163,8 @@ public class UpdateAttendanceCommandHandler : IRequestHandler<UpdateAttendanceCo
         _uow.Attendances.Update(attendance);
         await _uow.SaveChangesAsync(ct);
 
+        await _cache.RemoveByPrefixAsync(CacheKeys.AttendancePrefix, ct);
+
         return Result<bool>.Success(true, "Attendance record updated");
     }
 }
@@ -164,8 +175,9 @@ public record ConfirmAttendanceCommand(Guid AttendanceId) : IRequest<Result<bool
 public class ConfirmAttendanceCommandHandler : IRequestHandler<ConfirmAttendanceCommand, Result<bool>>
 {
     private readonly IUnitOfWork _uow;
+    private readonly ICacheService _cache;
 
-    public ConfirmAttendanceCommandHandler(IUnitOfWork uow) => _uow = uow;
+    public ConfirmAttendanceCommandHandler(IUnitOfWork uow, ICacheService cache) { _uow = uow; _cache = cache; }
 
     public async Task<Result<bool>> Handle(ConfirmAttendanceCommand req, CancellationToken ct)
     {
@@ -176,6 +188,8 @@ public class ConfirmAttendanceCommandHandler : IRequestHandler<ConfirmAttendance
         attendance.IsConfirmed = true;
         _uow.Attendances.Update(attendance);
         await _uow.SaveChangesAsync(ct);
+
+        await _cache.RemoveByPrefixAsync(CacheKeys.AttendancePrefix, ct);
 
         return Result<bool>.Success(true, "Attendance confirmed");
     }
