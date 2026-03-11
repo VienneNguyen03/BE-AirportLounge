@@ -1,3 +1,4 @@
+using AirportLounge.Application.Common;
 using AirportLounge.Application.Common.Interfaces;
 using AirportLounge.Application.Common.Models;
 using AirportLounge.Domain.Enums;
@@ -25,8 +26,10 @@ public record LeaveRequestDto(
     DateTime StartDate,
     DateTime EndDate,
     decimal TotalDays,
+    bool IsHalfDay,
     string? Reason,
     LeaveRequestStatus Status,
+    string? DecisionReason,
     string? ReviewerComment,
     DateTime? ReviewedAt,
     DateTime CreatedAt);
@@ -35,16 +38,25 @@ public class GetLeaveRequestsQueryHandler : IRequestHandler<GetLeaveRequestsQuer
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUserService _currentUser;
+    private readonly ICacheService _cache;
 
-    public GetLeaveRequestsQueryHandler(IUnitOfWork unitOfWork, ICurrentUserService currentUser)
+    public GetLeaveRequestsQueryHandler(IUnitOfWork unitOfWork, ICurrentUserService currentUser, ICacheService cache)
     {
         _unitOfWork = unitOfWork;
         _currentUser = currentUser;
+        _cache = cache;
     }
 
     public async Task<Result<PaginatedList<LeaveRequestDto>>> Handle(
         GetLeaveRequestsQuery request, CancellationToken cancellationToken)
     {
+        var cacheKey = CacheKeys.LeaveRequests(
+            request.EmployeeId, request.Status?.ToString(), request.StartDate, request.EndDate, request.Search, request.PageNumber);
+
+        var cached = await _cache.GetAsync<PaginatedList<LeaveRequestDto>>(cacheKey, cancellationToken);
+        if (cached is not null)
+            return Result<PaginatedList<LeaveRequestDto>>.Success(cached);
+
         var query = _unitOfWork.LeaveRequests.Query()
             .Include(lr => lr.Employee).ThenInclude(e => e.User)
             .Include(lr => lr.LeaveType)
@@ -74,6 +86,7 @@ public class GetLeaveRequestsQueryHandler : IRequestHandler<GetLeaveRequestsQuer
 
         if (request.EndDate.HasValue)
             query = query.Where(lr => lr.EndDate <= request.EndDate.Value.Date);
+
         if (!string.IsNullOrWhiteSpace(request.Search))
         {
             var search = request.Search.ToLower();
@@ -95,14 +108,18 @@ public class GetLeaveRequestsQueryHandler : IRequestHandler<GetLeaveRequestsQuer
                 lr.StartDate,
                 lr.EndDate,
                 lr.TotalDays,
+                lr.IsHalfDay,
                 lr.Reason,
                 lr.Status,
+                lr.DecisionReason,
                 lr.ReviewerComment,
                 lr.ReviewedAt,
                 lr.CreatedAt))
             .ToListAsync(cancellationToken);
 
         var result = new PaginatedList<LeaveRequestDto>(items, totalCount, request.PageNumber, request.PageSize);
+        await _cache.SetAsync(cacheKey, result, CacheKeys.LeaveRequestsTtl, cancellationToken);
+
         return Result<PaginatedList<LeaveRequestDto>>.Success(result);
     }
 }
