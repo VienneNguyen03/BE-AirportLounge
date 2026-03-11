@@ -14,7 +14,7 @@ public class CreateEmployeeCommandValidatorTests
     {
         var command = new CreateEmployeeCommand(
             "EMP001", "John Doe", "john@test.com", "0901234567",
-            "Password123", UserRole.Staff, "Service", "Staff", "VIP Service",
+            "Password123", UserRole.Staff, null, null, "VIP Service",
             null, DateTime.UtcNow.Date,
             null, null, null, null,
             null, null, null, null, null,
@@ -82,7 +82,7 @@ public class CreateEmployeeCommandValidatorTests
     {
         var command = new CreateEmployeeCommand(
             "MGR001", "Manager Name", "manager@test.com", null,
-            "Manager@123", UserRole.Manager, "Operations", "Manager", null,
+            "Manager@123", UserRole.Manager, null, null, null,
             null, DateTime.UtcNow.Date,
             null, null, null, null,
             null, null, null, null, null,
