@@ -8,9 +8,28 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AirportLounge.Application.Features.IdCards.Queries;
 
+public record IdCardEventDto(
+    Guid Id,
+    IdCardStatus FromStatus,
+    IdCardStatus ToStatus,
+    string Action,
+    string? Comment,
+    DateTime PerformedAt,
+    string PerformedByName);
+
 public record IdCardDto(
-    Guid Id, string CardNumber, string? TemplateType, IdCardStatus Status,
-    DateTime IssuedAt, DateTime? RevokedAt, string? RevokeReason, string? QrCodeData);
+    Guid Id, 
+    string CardNumber, 
+    string? TemplateType, 
+    IdCardStatus Status,
+    DateTime? IssuedAt,
+    DateTime? ActivatedAt,
+    DateTime? RevokedAt, 
+    string? RevokeReason, 
+    string? QrCodeData,
+    DateTime? ExpiryDate,
+    Guid? ReplacedByCardId,
+    List<IdCardEventDto> Events);
 
 public record GetEmployeeIdCardsQuery(Guid EmployeeId) : IRequest<Result<List<IdCardDto>>>;
 
@@ -43,11 +62,31 @@ public class GetEmployeeIdCardsQueryHandler : IRequestHandler<GetEmployeeIdCards
             return Result<List<IdCardDto>>.Success(cached);
 
         var cards = await _uow.EmployeeIdCards.Query()
+            .Include(c => c.Events).ThenInclude(e => e.PerformedBy)
             .Where(c => c.EmployeeId == req.EmployeeId && !c.IsDeleted)
-            .OrderByDescending(c => c.IssuedAt)
+            .OrderByDescending(c => c.CreatedAt)
             .Select(c => new IdCardDto(
-                c.Id, c.CardNumber, c.TemplateType, c.Status,
-                c.IssuedAt, c.RevokedAt, c.RevokeReason, c.QrCodeData))
+                c.Id, 
+                c.CardNumber, 
+                c.TemplateType, 
+                c.Status,
+                c.IssuedAt, 
+                c.ActivatedAt,
+                c.RevokedAt, 
+                c.RevokeReason, 
+                c.QrCodeData,
+                c.ExpiryDate,
+                c.ReplacedByCardId,
+                c.Events.OrderByDescending(e => e.PerformedAt).Select(e => new IdCardEventDto(
+                    e.Id,
+                    e.FromStatus,
+                    e.ToStatus,
+                    e.Action,
+                    e.Comment,
+                    e.PerformedAt,
+                    e.PerformedBy.FullName
+                )).ToList()
+            ))
             .ToListAsync(ct);
 
         await _cache.SetAsync(cacheKey, cards, CacheKeys.IdCardsTtl, ct);
