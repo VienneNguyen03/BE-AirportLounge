@@ -1,4 +1,7 @@
+using AirportLounge.Application.Common;
+using AirportLounge.Application.Common.Interfaces;
 using AirportLounge.Application.Common.Models;
+using AirportLounge.Domain.Enums;
 using AirportLounge.Domain.Interfaces;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -67,49 +70,63 @@ public record ScheduleItemDto(
 public class GetScheduleQueryHandler : IRequestHandler<GetScheduleQuery, Result<PaginatedList<ScheduleItemDto>>>
 {
     private readonly IUnitOfWork _uow;
-    public GetScheduleQueryHandler(IUnitOfWork uow) => _uow = uow;
+    private readonly ICacheService _cache;
+
+    public GetScheduleQueryHandler(IUnitOfWork uow, ICacheService cache)
+    {
+        _uow = uow;
+        _cache = cache;
+    }
 
     public async Task<Result<PaginatedList<ScheduleItemDto>>> Handle(GetScheduleQuery req, CancellationToken ct)
     {
-        var query = _uow.ShiftAssignments.Query()
-            .Include(sa => sa.Shift)
-            .Include(sa => sa.Employee).ThenInclude(e => e.User)
-            .Include(sa => sa.LoungeZone)
-            .Where(sa => sa.Date >= req.StartDate.Date && sa.Date <= req.EndDate.Date);
-
-        if (req.EmployeeId.HasValue)
-            query = query.Where(sa => sa.EmployeeId == req.EmployeeId.Value);
-
-        if (!string.IsNullOrWhiteSpace(req.Search))
+        var cacheKey = CacheKeys.ShiftSchedule(req.StartDate, req.EndDate, req.EmployeeId, req.Search, req.PageNumber);
+        
+        var cached = await _cache.GetAsync<PaginatedList<ScheduleItemDto>>(cacheKey, ct);
+        if (cached is null)
         {
-            var search = req.Search.ToLower();
-            query = query.Where(sa =>
-                sa.Employee.User.FullName.ToLower().Contains(search) ||
-                sa.Employee.EmployeeCode.ToLower().Contains(search) ||
-                (sa.LoungeZone != null && sa.LoungeZone.Name.ToLower().Contains(search)) ||
-                sa.Shift.Name.ToLower().Contains(search));
+            var query = _uow.ShiftAssignments.Query()
+                .Include(sa => sa.Shift)
+                .Include(sa => sa.Employee).ThenInclude(e => e.User)
+                .Include(sa => sa.LoungeZone)
+                .Where(sa => sa.Date >= req.StartDate.Date && sa.Date <= req.EndDate.Date);
+
+            if (req.EmployeeId.HasValue)
+                query = query.Where(sa => sa.EmployeeId == req.EmployeeId.Value);
+
+            if (!string.IsNullOrWhiteSpace(req.Search))
+            {
+                var search = req.Search.ToLower();
+                query = query.Where(sa =>
+                    sa.Employee.User.FullName.ToLower().Contains(search) ||
+                    sa.Employee.EmployeeCode.ToLower().Contains(search) ||
+                    (sa.LoungeZone != null && sa.LoungeZone.Name.ToLower().Contains(search)) ||
+                    sa.Shift.Name.ToLower().Contains(search));
+            }
+
+            var totalCount = await query.CountAsync(ct);
+            var items = await query
+                .OrderBy(sa => sa.Date).ThenBy(sa => sa.Shift.StartTime)
+                .Skip((req.PageNumber - 1) * req.PageSize)
+                .Take(req.PageSize)
+                .Select(sa => new ScheduleItemDto(
+                    sa.Id,
+                    sa.ShiftId,
+                    sa.EmployeeId,
+                    sa.LoungeZoneId,
+                    sa.Date,
+                    sa.Shift.Name,
+                    sa.Shift.StartTime,
+                    sa.Shift.EndTime,
+                    sa.Employee.User.FullName,
+                    sa.Employee.EmployeeCode,
+                    sa.LoungeZone != null ? sa.LoungeZone.Name : null))
+                .ToListAsync(ct);
+
+            cached = new PaginatedList<ScheduleItemDto>(items, totalCount, req.PageNumber, req.PageSize);
+            await _cache.SetAsync(cacheKey, cached, CacheKeys.ShiftsTtl, ct);
         }
 
-        var totalCount = await query.CountAsync(ct);
-        var items = await query
-            .OrderBy(sa => sa.Date).ThenBy(sa => sa.Shift.StartTime)
-            .Skip((req.PageNumber - 1) * req.PageSize)
-            .Take(req.PageSize)
-            .Select(sa => new ScheduleItemDto(
-                sa.Id,
-                sa.ShiftId,
-                sa.EmployeeId,
-                sa.LoungeZoneId,
-                sa.Date,
-                sa.Shift.Name,
-                sa.Shift.StartTime,
-                sa.Shift.EndTime,
-                sa.Employee.User.FullName,
-                sa.Employee.EmployeeCode,
-                sa.LoungeZone != null ? sa.LoungeZone.Name : null))
-            .ToListAsync(ct);
-
-        return Result<PaginatedList<ScheduleItemDto>>.Success(
-            new PaginatedList<ScheduleItemDto>(items, totalCount, req.PageNumber, req.PageSize));
+        return Result<PaginatedList<ScheduleItemDto>>.Success(cached);
     }
 }
