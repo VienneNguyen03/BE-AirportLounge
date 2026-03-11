@@ -20,10 +20,33 @@ public class OffboardingController : ControllerBase
     [Authorize(Roles = "Admin")]
     [ProducesResponseType(typeof(Result<Guid>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> Initiate([FromBody] InitiateOffboardingCommand command)
     {
         var result = await _mediator.Send(command);
+        return result.IsSuccess ? Ok(result) : BadRequest(result);
+    }
+
+    [HttpPost("{processId:guid}/{action}")]
+    [Authorize(Roles = "Admin")]
+    [ProducesResponseType(typeof(Result<bool>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> Transition(Guid processId, string action)
+    {
+        var validActions = new[] { "start", "asset-recovery", "access-revocation", "final-settlement", "complete" };
+        if (!validActions.Contains(action))
+            return BadRequest(Result<bool>.Failure($"Invalid action: {action}"));
+
+        var result = await _mediator.Send(new TransitionOffboardingCommand(processId, action));
+        return result.IsSuccess ? Ok(result) : BadRequest(result);
+    }
+
+    [HttpPost("tasks/{taskId:guid}/complete")]
+    [Authorize(Roles = "Admin,Manager")]
+    [ProducesResponseType(typeof(Result<bool>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> CompleteTask(Guid taskId)
+    {
+        var result = await _mediator.Send(new CompleteOffboardingTaskCommand(taskId));
         return result.IsSuccess ? Ok(result) : BadRequest(result);
     }
 
@@ -31,7 +54,6 @@ public class OffboardingController : ControllerBase
     [Authorize(Roles = "Admin")]
     [ProducesResponseType(typeof(Result<bool>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateOffboardingCommand command)
     {
         if (id != command.ProcessId)
@@ -43,7 +65,6 @@ public class OffboardingController : ControllerBase
     [HttpGet("{employeeId:guid}")]
     [ProducesResponseType(typeof(Result<OffboardingDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> Get(Guid employeeId)
     {
         var result = await _mediator.Send(new GetOffboardingQuery(employeeId));
