@@ -1,3 +1,4 @@
+using AirportLounge.Application.Common;
 using AirportLounge.Application.Common.Interfaces;
 using AirportLounge.Application.Common.Models;
 using AirportLounge.Domain.Entities;
@@ -19,9 +20,10 @@ public class CreateTaskCommandHandler : IRequestHandler<CreateTaskCommand, Resul
     private readonly IUnitOfWork _uow;
     private readonly ICurrentUserService _currentUser;
     private readonly INotificationService _notifications;
+    private readonly ICacheService _cache;
 
-    public CreateTaskCommandHandler(IUnitOfWork uow, ICurrentUserService currentUser, INotificationService notifications)
-    { _uow = uow; _currentUser = currentUser; _notifications = notifications; }
+    public CreateTaskCommandHandler(IUnitOfWork uow, ICurrentUserService currentUser, INotificationService notifications, ICacheService cache)
+    { _uow = uow; _currentUser = currentUser; _notifications = notifications; _cache = cache; }
 
     public async Task<Result<Guid>> Handle(CreateTaskCommand req, CancellationToken ct)
     {
@@ -51,6 +53,8 @@ public class CreateTaskCommandHandler : IRequestHandler<CreateTaskCommand, Resul
             }
         }
 
+        await _cache.RemoveByPrefixAsync(CacheKeys.TasksPrefix, ct);
+
         return Result<Guid>.Success(task.Id, "Task created");
     }
 }
@@ -61,7 +65,10 @@ public record UpdateTaskStatusCommand(Guid TaskId, TaskItemStatus NewStatus) : I
 public class UpdateTaskStatusCommandHandler : IRequestHandler<UpdateTaskStatusCommand, Result<bool>>
 {
     private readonly IUnitOfWork _uow;
-    public UpdateTaskStatusCommandHandler(IUnitOfWork uow) => _uow = uow;
+    private readonly ICacheService _cache;
+
+    public UpdateTaskStatusCommandHandler(IUnitOfWork uow, ICacheService cache)
+    { _uow = uow; _cache = cache; }
 
     public async Task<Result<bool>> Handle(UpdateTaskStatusCommand req, CancellationToken ct)
     {
@@ -74,6 +81,8 @@ public class UpdateTaskStatusCommandHandler : IRequestHandler<UpdateTaskStatusCo
 
         _uow.TaskItems.Update(task);
         await _uow.SaveChangesAsync(ct);
+
+        await _cache.RemoveByPrefixAsync(CacheKeys.TasksPrefix, ct);
 
         return Result<bool>.Success(true, $"Task status updated to {req.NewStatus}");
     }
@@ -89,9 +98,10 @@ public class UpdateTaskCommandHandler : IRequestHandler<UpdateTaskCommand, Resul
 {
     private readonly IUnitOfWork _uow;
     private readonly ICurrentUserService _currentUser;
+    private readonly ICacheService _cache;
 
-    public UpdateTaskCommandHandler(IUnitOfWork uow, ICurrentUserService currentUser)
-    { _uow = uow; _currentUser = currentUser; }
+    public UpdateTaskCommandHandler(IUnitOfWork uow, ICurrentUserService currentUser, ICacheService cache)
+    { _uow = uow; _currentUser = currentUser; _cache = cache; }
 
     public async Task<Result<bool>> Handle(UpdateTaskCommand req, CancellationToken ct)
     {
@@ -108,6 +118,9 @@ public class UpdateTaskCommandHandler : IRequestHandler<UpdateTaskCommand, Resul
 
         _uow.TaskItems.Update(task);
         await _uow.SaveChangesAsync(ct);
+
+        await _cache.RemoveByPrefixAsync(CacheKeys.TasksPrefix, ct);
+
         return Result<bool>.Success(true, "Task updated");
     }
 }
@@ -118,7 +131,10 @@ public record DeleteTaskCommand(Guid TaskId) : IRequest<Result<bool>>;
 public class DeleteTaskCommandHandler : IRequestHandler<DeleteTaskCommand, Result<bool>>
 {
     private readonly IUnitOfWork _uow;
-    public DeleteTaskCommandHandler(IUnitOfWork uow) => _uow = uow;
+    private readonly ICacheService _cache;
+
+    public DeleteTaskCommandHandler(IUnitOfWork uow, ICacheService cache)
+    { _uow = uow; _cache = cache; }
 
     public async Task<Result<bool>> Handle(DeleteTaskCommand req, CancellationToken ct)
     {
@@ -128,6 +144,9 @@ public class DeleteTaskCommandHandler : IRequestHandler<DeleteTaskCommand, Resul
         task.IsDeleted = true;
         _uow.TaskItems.Update(task);
         await _uow.SaveChangesAsync(ct);
+
+        await _cache.RemoveByPrefixAsync(CacheKeys.TasksPrefix, ct);
+
         return Result<bool>.Success(true, "Task deleted");
     }
 }
