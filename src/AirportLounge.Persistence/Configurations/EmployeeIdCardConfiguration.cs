@@ -17,12 +17,26 @@ public class EmployeeIdCardConfiguration : IEntityTypeConfiguration<EmployeeIdCa
         builder.Property(e => e.RevokeReason).HasMaxLength(500);
         builder.Property(e => e.QrCodeData).HasMaxLength(2000);
 
+        // Optimistic concurrency
+        builder.Property(e => e.RowVersion)
+            .IsRowVersion()
+            .HasColumnName("xmin")
+            .HasColumnType("xid")
+            .ValueGeneratedOnAddOrUpdate();
+
         builder.HasIndex(e => e.CardNumber).IsUnique();
 
         builder.HasOne(e => e.Employee).WithMany(emp => emp.IdCards)
             .HasForeignKey(e => e.EmployeeId).OnDelete(DeleteBehavior.Cascade);
+        
         builder.HasOne(e => e.IssuedBy).WithMany()
             .HasForeignKey(e => e.IssuedById).OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(e => e.ReplacedByCard).WithMany()
+            .HasForeignKey(e => e.ReplacedByCardId).OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasMany(e => e.Events).WithOne(ev => ev.Card)
+            .HasForeignKey(ev => ev.CardId).OnDelete(DeleteBehavior.Cascade);
 
         builder.HasQueryFilter(e => !e.IsDeleted);
     }
