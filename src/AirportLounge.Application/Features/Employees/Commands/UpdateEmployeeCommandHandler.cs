@@ -33,14 +33,14 @@ public class UpdateEmployeeCommandHandler : IRequestHandler<UpdateEmployeeComman
         var oldValues = System.Text.Json.JsonSerializer.Serialize(new
         {
             employee.User.FullName, employee.User.PhoneNumber,
-            employee.Department, employee.Position, employee.Skills
+            employee.DepartmentId, employee.PositionId, employee.Skills
         });
 
         employee.User.FullName = request.FullName;
         employee.User.PhoneNumber = request.PhoneNumber;
         employee.User.UpdatedBy = _currentUser.Email;
-        employee.Department = request.Department;
-        employee.Position = request.Position;
+        employee.DepartmentId = request.DepartmentId;
+        employee.PositionId = request.PositionId;
         employee.Skills = request.Skills;
         if (request.HireDate.HasValue)
         {
@@ -75,7 +75,7 @@ public class UpdateEmployeeCommandHandler : IRequestHandler<UpdateEmployeeComman
             NewValues = System.Text.Json.JsonSerializer.Serialize(new
             {
                 request.FullName, request.PhoneNumber,
-                request.Department, request.Position, request.Skills
+                request.DepartmentId, request.PositionId, request.Skills
             }),
             PerformedBy = _currentUser.Email ?? "System",
             PerformedAt = DateTime.UtcNow
