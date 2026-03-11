@@ -1,3 +1,5 @@
+using AirportLounge.Application.Common;
+using AirportLounge.Application.Common.Interfaces;
 using AirportLounge.Application.Common.Models;
 using AirportLounge.Domain.Enums;
 using AirportLounge.Domain.Interfaces;
@@ -22,44 +24,58 @@ public class GetAttendanceReportQueryHandler
     : IRequestHandler<GetAttendanceReportQuery, Result<PaginatedList<AttendanceReportDto>>>
 {
     private readonly IUnitOfWork _uow;
-    public GetAttendanceReportQueryHandler(IUnitOfWork uow) => _uow = uow;
+    private readonly ICacheService _cache;
+
+    public GetAttendanceReportQueryHandler(IUnitOfWork uow, ICacheService cache)
+    {
+        _uow = uow;
+        _cache = cache;
+    }
 
     public async Task<Result<PaginatedList<AttendanceReportDto>>> Handle(
         GetAttendanceReportQuery req, CancellationToken ct)
     {
-        var query = _uow.Attendances.Query()
-            .Include(a => a.Employee).ThenInclude(e => e.User)
-            .Include(a => a.ShiftAssignment).ThenInclude(sa => sa.Shift)
-            .Where(a => a.ShiftAssignment.Date >= req.StartDate.Date
-                        && a.ShiftAssignment.Date <= req.EndDate.Date);
-
-        if (req.EmployeeId.HasValue)
-            query = query.Where(a => a.EmployeeId == req.EmployeeId.Value);
-        if (req.Status.HasValue)
-            query = query.Where(a => a.Status == req.Status.Value);
-        if (!string.IsNullOrWhiteSpace(req.Search))
+        var cacheKey = CacheKeys.AttendanceList(req.StartDate, req.EndDate, req.EmployeeId, req.Status?.ToString(), req.Search, req.PageNumber);
+        
+        var cached = await _cache.GetAsync<PaginatedList<AttendanceReportDto>>(cacheKey, ct);
+        if (cached is null)
         {
-            var search = req.Search.ToLower();
-            query = query.Where(a =>
-                a.Employee.User.FullName.ToLower().Contains(search) ||
-                a.Employee.EmployeeCode.ToLower().Contains(search));
+            var query = _uow.Attendances.Query()
+                .Include(a => a.Employee).ThenInclude(e => e.User)
+                .Include(a => a.ShiftAssignment).ThenInclude(sa => sa.Shift)
+                .Where(a => a.ShiftAssignment.Date >= req.StartDate.Date
+                            && a.ShiftAssignment.Date <= req.EndDate.Date);
+
+            if (req.EmployeeId.HasValue)
+                query = query.Where(a => a.EmployeeId == req.EmployeeId.Value);
+            if (req.Status.HasValue)
+                query = query.Where(a => a.Status == req.Status.Value);
+            if (!string.IsNullOrWhiteSpace(req.Search))
+            {
+                var search = req.Search.ToLower();
+                query = query.Where(a =>
+                    a.Employee.User.FullName.ToLower().Contains(search) ||
+                    a.Employee.EmployeeCode.ToLower().Contains(search));
+            }
+
+            var total = await query.CountAsync(ct);
+
+            var items = await query
+                .OrderByDescending(a => a.ShiftAssignment.Date)
+                .Skip((req.PageNumber - 1) * req.PageSize)
+                .Take(req.PageSize)
+                .Select(a => new AttendanceReportDto(
+                    a.Id, a.Employee.User.FullName, a.Employee.EmployeeCode,
+                    a.ShiftAssignment.Date, a.ShiftAssignment.Shift.Name,
+                    a.CheckInTime, a.CheckOutTime, a.WorkedHours,
+                    a.Status.ToString(), a.IsManuallyAdjusted, a.IsConfirmed))
+                .ToListAsync(ct);
+
+            cached = new PaginatedList<AttendanceReportDto>(items, total, req.PageNumber, req.PageSize);
+            await _cache.SetAsync(cacheKey, cached, CacheKeys.AttendanceTtl, ct);
         }
 
-        var total = await query.CountAsync(ct);
-
-        var items = await query
-            .OrderByDescending(a => a.ShiftAssignment.Date)
-            .Skip((req.PageNumber - 1) * req.PageSize)
-            .Take(req.PageSize)
-            .Select(a => new AttendanceReportDto(
-                a.Id, a.Employee.User.FullName, a.Employee.EmployeeCode,
-                a.ShiftAssignment.Date, a.ShiftAssignment.Shift.Name,
-                a.CheckInTime, a.CheckOutTime, a.WorkedHours,
-                a.Status.ToString(), a.IsManuallyAdjusted, a.IsConfirmed))
-            .ToListAsync(ct);
-
-        return Result<PaginatedList<AttendanceReportDto>>.Success(
-            new PaginatedList<AttendanceReportDto>(items, total, req.PageNumber, req.PageSize));
+        return Result<PaginatedList<AttendanceReportDto>>.Success(cached);
     }
 }
 
