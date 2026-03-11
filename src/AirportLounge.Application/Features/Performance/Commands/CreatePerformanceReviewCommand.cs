@@ -12,7 +12,8 @@ public record CreatePerformanceReviewCommand(
     Guid EmployeeId,
     string Period,
     ReviewType ReviewType,
-    string? Comments) : IRequest<Result<Guid>>;
+    string? Comments,
+    DateTime? DueDate) : IRequest<Result<Guid>>;
 
 public class CreatePerformanceReviewCommandHandler : IRequestHandler<CreatePerformanceReviewCommand, Result<Guid>>
 {
@@ -42,8 +43,9 @@ public class CreatePerformanceReviewCommandHandler : IRequestHandler<CreatePerfo
             ReviewerId = _currentUser.UserId.Value,
             Period = request.Period,
             ReviewType = request.ReviewType,
-            Status = ReviewStatus.Draft,
+            Status = ReviewStatus.NotStarted,
             Comments = request.Comments,
+            DueDate = request.DueDate,
             ReviewDate = DateTime.UtcNow,
             CreatedBy = _currentUser.Email
         };
