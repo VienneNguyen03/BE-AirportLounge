@@ -11,6 +11,9 @@ public class AppDbContext : DbContext
 
     public DbSet<User> Users => Set<User>();
     public DbSet<Employee> Employees => Set<Employee>();
+    public DbSet<Department> Departments => Set<Department>();
+    public DbSet<Position> Positions => Set<Position>();
+    public DbSet<Skill> Skills => Set<Skill>();
     public DbSet<Shift> Shifts => Set<Shift>();
     public DbSet<ShiftAssignment> ShiftAssignments => Set<ShiftAssignment>();
     public DbSet<Attendance> Attendances => Set<Attendance>();
@@ -23,20 +26,25 @@ public class AppDbContext : DbContext
     public DbSet<LeaveType> LeaveTypes => Set<LeaveType>();
     public DbSet<LeaveBalance> LeaveBalances => Set<LeaveBalance>();
     public DbSet<LeaveRequest> LeaveRequests => Set<LeaveRequest>();
+    public DbSet<LeaveAttachment> LeaveAttachments => Set<LeaveAttachment>();
 
     public DbSet<SalaryStructure> SalaryStructures => Set<SalaryStructure>();
     public DbSet<PayrollRecord> PayrollRecords => Set<PayrollRecord>();
 
     public DbSet<PerformanceGoal> PerformanceGoals => Set<PerformanceGoal>();
     public DbSet<PerformanceReview> PerformanceReviews => Set<PerformanceReview>();
+    public DbSet<ReviewFeedback> ReviewFeedbacks => Set<ReviewFeedback>();
     public DbSet<TrainingCourse> TrainingCourses => Set<TrainingCourse>();
     public DbSet<TrainingEnrollment> TrainingEnrollments => Set<TrainingEnrollment>();
 
     public DbSet<OnboardingProcess> OnboardingProcesses => Set<OnboardingProcess>();
     public DbSet<OnboardingTask> OnboardingTasks => Set<OnboardingTask>();
     public DbSet<OffboardingProcess> OffboardingProcesses => Set<OffboardingProcess>();
+    public DbSet<OffboardingTask> OffboardingTasks => Set<OffboardingTask>();
 
     public DbSet<EmployeeIdCard> EmployeeIdCards => Set<EmployeeIdCard>();
+    public DbSet<IdCardEvent> IdCardEvents => Set<IdCardEvent>();
+    public DbSet<IdCardTemplate> IdCardTemplates => Set<IdCardTemplate>();
     public DbSet<EmployeeDocument> EmployeeDocuments => Set<EmployeeDocument>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
