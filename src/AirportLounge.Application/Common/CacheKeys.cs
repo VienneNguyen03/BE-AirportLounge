@@ -20,6 +20,23 @@ public static class CacheKeys
     public static readonly TimeSpan ZonesTtl = TimeSpan.FromMinutes(2);
     public static readonly TimeSpan ZoneAlertsTtl = TimeSpan.FromSeconds(30);
 
+    public const string ShiftsPrefix = "shifts:";
+    public static string ShiftSchedule(DateTime start, DateTime end, Guid? empId, string? search, int page) 
+        => $"shifts:schedule:{start:yyyyMMdd}_{end:yyyyMMdd}_{empId}_{search}_{page}";
+    public static readonly TimeSpan ShiftsTtl = TimeSpan.FromMinutes(2);
+
+    // ── Tasks ────────────────────────────────────────────────────
+    public const string TasksPrefix = "tasks:";
+    public static string TasksList(string? status, Guid? assignedTo, string? priority, string? search, int page)
+        => $"tasks:list:{status}_{assignedTo}_{priority}_{search}_{page}";
+    public static readonly TimeSpan TasksTtl = TimeSpan.FromMinutes(5);
+
+    // ── Attendance ───────────────────────────────────────────────
+    public const string AttendancePrefix = "attendance:";
+    public static string AttendanceList(DateTime start, DateTime end, Guid? empId, string? status, string? search, int page)
+        => $"attendance:list:{start:yyyyMMdd}_{end:yyyyMMdd}_{empId}_{status}_{search}_{page}";
+    public static readonly TimeSpan AttendanceTtl = TimeSpan.FromMinutes(5);
+
     public static readonly string[] AllZoneListKeys = new[]
     {
         ZonesList(null),
@@ -32,9 +49,11 @@ public static class CacheKeys
     };
 
     // ── V2: Leave Management ─────────────────────────────────────
+    public const string LeavesPrefix = "leave:";
     public const string LeaveTypesList = "leave:types";
     public static string LeaveBalance(Guid employeeId, int year) => $"leave:balance:{employeeId}:{year}";
-    public static string LeaveRequests(Guid employeeId) => $"leave:requests:{employeeId}";
+    public static string LeaveRequests(Guid? empId, string? status, DateTime? start, DateTime? end, string? search, int page) 
+        => $"leave:requests:{empId}_{status}_{start:yyyyMMdd}_{end:yyyyMMdd}_{search}_{page}";
     public const string LeaveRequestsPending = "leave:requests:pending";
     public static readonly TimeSpan LeaveTypesTtl = TimeSpan.FromMinutes(30);
     public static readonly TimeSpan LeaveBalanceTtl = TimeSpan.FromMinutes(5);
@@ -64,4 +83,10 @@ public static class CacheKeys
     public static string Documents(Guid employeeId) => $"documents:{employeeId}";
     public static readonly TimeSpan IdCardsTtl = TimeSpan.FromMinutes(10);
     public static readonly TimeSpan DocumentsTtl = TimeSpan.FromMinutes(5);
+    
+    // ── V2: Master Data ─────────────────────────────────────────
+    public const string DepartmentsList = "masterdata:departments:all";
+    public const string PositionsList = "masterdata:positions:all";
+    public const string SkillsList = "masterdata:skills:all";
+    public static readonly TimeSpan MasterDataTtl = TimeSpan.FromHours(24);
 }
