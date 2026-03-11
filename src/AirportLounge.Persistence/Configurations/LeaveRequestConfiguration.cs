@@ -15,6 +15,14 @@ public class LeaveRequestConfiguration : IEntityTypeConfiguration<LeaveRequest>
         builder.Property(e => e.Reason).HasMaxLength(1000);
         builder.Property(e => e.Status).HasConversion<int>();
         builder.Property(e => e.ReviewerComment).HasMaxLength(1000);
+        builder.Property(e => e.DecisionReason).HasMaxLength(1000);
+
+        // Optimistic concurrency
+        builder.Property(e => e.RowVersion)
+            .IsRowVersion()
+            .HasColumnName("xmin")
+            .HasColumnType("xid")
+            .ValueGeneratedOnAddOrUpdate();
 
         builder.HasOne(e => e.Employee).WithMany(emp => emp.LeaveRequests)
             .HasForeignKey(e => e.EmployeeId).OnDelete(DeleteBehavior.Cascade);
@@ -22,6 +30,9 @@ public class LeaveRequestConfiguration : IEntityTypeConfiguration<LeaveRequest>
             .HasForeignKey(e => e.LeaveTypeId).OnDelete(DeleteBehavior.Cascade);
         builder.HasOne(e => e.ReviewedBy).WithMany()
             .HasForeignKey(e => e.ReviewedById).OnDelete(DeleteBehavior.SetNull);
+
+        builder.HasMany(e => e.Attachments).WithOne(a => a.LeaveRequest)
+            .HasForeignKey(a => a.LeaveRequestId).OnDelete(DeleteBehavior.Cascade);
 
         builder.HasQueryFilter(e => !e.IsDeleted);
     }
