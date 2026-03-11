@@ -722,22 +722,33 @@ Nếu bất kỳ ngày nào vi phạm rule (trùng ca, đang nghỉ phép, đã 
 
 ### POST `/api/idcards`
 
-**Quyền:** Admin  
+**Quyền:** Admin, Manager  
 **Mục đích:** Cấp phát thẻ ID cho nhân viên (tự sinh mã thẻ và dữ liệu QR từ hồ sơ).
 
 | Trường | Kiểu | Bắt buộc | Mô tả |
 |--------|------|----------|--------|
 | `employeeId` | Guid | Có | ID nhân viên |
-| `templateType` | string | Không | Loại mẫu thẻ (theo bộ phận/loại NV) |
+| `templateId` | Guid | Có | ID mẫu thẻ sử dụng |
 
 **Response (200):** `{ isSuccess, data: <cardId (Guid)>, message }`
 
 ---
 
+### POST `/api/idcards/{id}/activate`
+
+**Quyền:** Admin, Manager  
+**Mục đích:** Kích hoạt thẻ ID từ trạng thái Issued sang Active.
+
+**Path:** `id` (Guid) – ID thẻ ID.
+
+**Response (200):** `{ isSuccess, data: true, message }`
+
+---
+
 ### POST `/api/idcards/{id}/revoke`
 
-**Quyền:** Admin  
-**Mục đích:** Thu hồi thẻ ID (mất thẻ, thôi việc). Body phải có `cardId` trùng với `id` trong URL.
+**Quyền:** Admin, Manager  
+**Mục đích:** Thu hồi thẻ ID. Trạng thái thẻ chuyển sang Revoked.
 
 | Trường | Kiểu | Bắt buộc | Mô tả |
 |--------|------|----------|--------|
@@ -745,6 +756,49 @@ Nếu bất kỳ ngày nào vi phạm rule (trùng ca, đang nghỉ phép, đã 
 | `reason` | string | Có | Lý do thu hồi |
 
 **Response (200):** `{ isSuccess, data: true, message }`
+
+---
+
+### POST `/api/idcards/{id}/report`
+
+**Quyền:** Đã đăng nhập (Nhân viên tự báo cáo)  
+**Mục đích:** Báo cáo thẻ bị mất hoặc hỏng. Trạng thái chuyển sang Lost hoặc Damaged.
+
+| Trường | Kiểu | Bắt buộc | Mô tả |
+|--------|------|----------|--------|
+| `cardId` | Guid | Có | Phải trùng với `id` trong URL |
+| `isLost` | bool | Có | Trạng thái Lost hoặc Damaged |
+| `reason` | string | Có | Chi tiết lý do |
+
+**Response (200):** `{ isSuccess, data: true, message }`
+
+---
+
+### POST `/api/idcards/{id}/request-reissue`
+
+**Quyền:** Đã đăng nhập  
+**Mục đích:** Yêu cầu cấp lại thẻ ID (chuyển sang trạng thái ReissueRequested).
+
+| Trường | Kiểu | Bắt buộc | Mô tả |
+|--------|------|----------|--------|
+| `cardId` | Guid | Có | Phải trùng với `id` trong URL |
+| `reason` | string | Có | Lý do cấp lại |
+
+**Response (200):** `{ isSuccess, data: true, message }`
+
+---
+
+### POST `/api/idcards/{id}/reissue`
+
+**Quyền:** Admin, Manager  
+**Mục đích:** Cấp lại thẻ (reissue) dựa trên thẻ cũ, có thể thay đổi template.
+
+| Trường | Kiểu | Bắt buộc | Mô tả |
+|--------|------|----------|--------|
+| `cardId` | Guid | Có | Phải trùng với `id` trong URL |
+| `newTemplateId` | Guid? | Không | Mẫu thẻ mới (tùy chọn) |
+
+**Response (200):** `{ isSuccess, data: <newCardId (Guid)>, message }`
 
 ---
 
@@ -788,16 +842,53 @@ Nếu bất kỳ ngày nào vi phạm rule (trùng ca, đang nghỉ phép, đã 
 
 ---
 
-### POST `/api/onboarding/tasks/{id}/complete`
+### POST `/api/onboarding/{processId}/start`
 
-**Quyền:** Đã đăng nhập  
-**Mục đích:** Đánh dấu hoàn thành một nhiệm vụ trong checklist onboarding.
+**Quyền:** Admin, Manager  
+**Mục đích:** Bắt đầu quy trình onboarding (từ Created sang InProgress).
 
-**Path:** `id` (Guid) – ID nhiệm vụ onboarding.
+**Path:** `processId` (Guid).
 
-**Response (200):** `{ isSuccess, data, message }`
+**Response (200):** `{ isSuccess, data: true, message }`
 
 ---
+
+### POST `/api/onboarding/{processId}/block`
+
+**Quyền:** Admin, Manager  
+**Mục đích:** Đánh dấu quy trình onboarding bị vướng mắc (Blocked).
+
+| Trường | Kiểu | Bắt buộc | Mô tả |
+|--------|------|----------|--------|
+| `reason` | string | Không | Lý do bị block |
+
+**Response (200):** `{ isSuccess, data: true, message }`
+
+---
+
+### POST `/api/onboarding/{processId}/unblock`
+
+**Quyền:** Admin, Manager  
+**Mục đích:** Hủy trạng thái Blocked của quy trình onboarding.
+
+**Path:** `processId` (Guid).
+
+**Response (200):** `{ isSuccess, data: true, message }`
+
+---
+
+### POST `/api/onboarding/{processId}/activate`
+
+**Quyền:** Admin, Manager  
+**Mục đích:** Kích hoạt nhân viên (từ Completed sang Activated), đánh dấu quá trình hòa nhập hoàn thiện.
+
+**Path:** `processId` (Guid).
+
+**Response (200):** `{ isSuccess, data: true, message }`
+
+---
+
+### POST `/api/onboarding/tasks/{id}/complete`
 
 ### GET `/api/onboarding/{employeeId}`
 
@@ -830,10 +921,34 @@ Nếu bất kỳ ngày nào vi phạm rule (trùng ca, đang nghỉ phép, đã 
 
 ---
 
+### POST `/api/offboarding/{processId}/{action}`
+
+**Quyền:** Admin  
+**Mục đích:** Chuyển đổi trạng thái quy trình offboarding. Hỗ trợ workflow step-by-step.
+
+**Path:** 
+- `processId` (Guid) – ID quy trình offboarding
+- `action` (string) – Hành động tương ứng: `start`, `asset-recovery`, `access-revocation`, `final-settlement`, `complete`
+
+**Response (200):** `{ isSuccess, data: true, message }`
+
+---
+
+### POST `/api/offboarding/tasks/{taskId}/complete`
+
+**Quyền:** Admin, Manager  
+**Mục đích:** Đánh dấu hoàn thành một nhiệm vụ (được giao trong checklist offboarding).
+
+**Path:** `taskId` (Guid).
+
+**Response (200):** `{ isSuccess, data: true, message }`
+
+---
+
 ### PUT `/api/offboarding/{id}`
 
 **Quyền:** Admin  
-**Mục đích:** Cập nhật tiến độ offboarding: khảo sát thoát, bàn giao tài sản, thu hồi quyền. Khi đủ điều kiện (survey + asset + access) hệ thống đánh dấu Completed và vô hiệu hóa nhân viên/tài khoản.
+**Mục đích:** Cập nhật thông tin bổ sung cho quy trình offboarding (khảo sát, đánh dấu trả thiết bị/khóa quyền).
 
 | Trường | Kiểu | Bắt buộc | Mô tả |
 |--------|------|----------|--------|
@@ -995,12 +1110,13 @@ Nếu bất kỳ ngày nào vi phạm rule (trùng ca, đang nghỉ phép, đã 
 ### POST `/api/performance/reviews/{id}/self-assessment`
 
 **Quyền:** Đã đăng nhập (thường là nhân viên được đánh giá)  
-**Mục đích:** Nộp tự đánh giá cho phiên đánh giá. Chuyển trạng thái sang ManagerReview.
+**Mục đích:** Nộp tự đánh giá cho phiên đánh giá. Chuyển trạng thái sang SelfSubmitted.
 
 | Trường | Kiểu | Bắt buộc | Mô tả |
 |--------|------|----------|--------|
 | `reviewId` | Guid | Có | Phải trùng với `id` trong URL |
 | `selfAssessment` | string | Có | Nội dung tự đánh giá |
+| `selfScore` | decimal? | Không | Điểm số tự đánh giá |
 
 **Response (200):** `{ isSuccess, data: true, message }`
 
@@ -1009,16 +1125,46 @@ Nếu bất kỳ ngày nào vi phạm rule (trùng ca, đang nghỉ phép, đã 
 ### POST `/api/performance/reviews/{id}/complete`
 
 **Quyền:** Admin, Manager  
-**Mục đích:** Hoàn tất đánh giá: nhập đánh giá của quản lý, điểm tổng và kế hoạch cải thiện. Chuyển trạng thái sang Completed.
+**Mục đích:** Quản lý hoàn tất bước đánh giá. Chuyển trạng thái sang ManagerSubmitted.
 
 | Trường | Kiểu | Bắt buộc | Mô tả |
 |--------|------|----------|--------|
 | `reviewId` | Guid | Có | Phải trùng với `id` trong URL |
 | `managerAssessment` | string | Có | Đánh giá của quản lý |
-| `overallScore` | decimal | Có | Điểm tổng (vd: thang 1–10 hoặc %) |
-| `improvementPlan` | string | Không | Kế hoạch cải thiện / đào tạo |
+| `managerScore` | decimal? | Không | Điểm quá trình đánh giá của quản lý |
+| `overallScore` | decimal | Có | Điểm tổng kết cuối cùng |
+| `improvementPlan` | string | Không | Kế hoạch cải thiện |
 
 **Response (200):** `{ isSuccess, data: true, message }`
+
+---
+
+### POST `/api/performance/reviews/{reviewId}/{action}`
+
+**Quyền:** Admin, Manager  
+**Mục đích:** Chuyển đổi workflow trạng thái của quá trình đánh giá hiệu suất.
+
+**Path:** 
+- `reviewId` (Guid)
+- `action` (string) – có thể là: `start`, `open-peer-review`, `close-peer-review`, `manager-review`, `calibrate`, `finalize`
+
+**Response (200):** `{ isSuccess, data: true, message }`
+
+---
+
+### POST `/api/performance/reviews/{reviewId}/feedback`
+
+**Quyền:** Đã đăng nhập (Chỉ trạng thái PeerReviewOpen)  
+**Mục đích:** Nộp phản hồi đồng nghiệp ẩn danh hoặc công khai.
+
+| Trường | Kiểu | Bắt buộc | Mô tả |
+|--------|------|----------|--------|
+| `reviewId` | Guid | Có | Phải trùng với `id` trong URL |
+| `comment` | string | Không | Bình luận phản hồi |
+| `score` | decimal? | Không | Điểm số đánh giá |
+| `isAnonymous` | bool | Có | Chọn phản hồi ẩn danh không |
+
+**Response (200):** `{ isSuccess, data: <feedbackId (Guid)>, message }`
 
 ---
 
@@ -1262,9 +1408,11 @@ Dùng trong request/response dưới dạng **số nguyên (int)**.
 | **AttendanceStatus** | 0=OnTime, 1=Late, 2=EarlyLeave, 3=Overtime, 4=Absent | Trạng thái chấm công |
 | **NotificationType** | 0=General, 1=ShiftChange, 2=TaskAssignment, 3=Urgent, 4=System, 5=LeaveRequest, 6=LeaveApproval, 7=PerformanceReview, 8=TrainingAssignment, 9=TrainingCompletion, 10=OnboardingTask, 11=IdCardIssued, 12=PayrollReady | Loại thông báo |
 | **DocumentCategory** | 0=Contract, 1=Certificate, 2=IdDocument, 3=Photo, 4=PaySlip, 5=Other | Danh mục tài liệu |
-| **LeaveRequestStatus** | 0=Pending, 1=Approved, 2=Rejected, 3=Cancelled | Trạng thái yêu cầu nghỉ phép |
+| **LeaveRequestStatus** | 0=Draft, 1=Submitted, 2=UnderReview, 3=NeedsInfo, 4=Approved, 5=Scheduled, 6=Rejected, 7=Cancelled, 8=Taken | Trạng thái yêu cầu nghỉ phép |
 | **ReviewType** | 0=Quarterly, 1=Annual | Loại đánh giá (quý/năm) |
-| **ReviewStatus** | Draft, SelfAssessment, ManagerReview, Completed | Trạng thái phiên đánh giá (nội bộ) |
+| **ReviewStatus** | 0=NotStarted, 1=SelfInProgress, 2=SelfSubmitted, 3=PeerReviewOpen, 4=PeerReviewDone, 5=ManagerReview, 6=ManagerSubmitted, 7=Calibration, 8=Finalized | Trạng thái phiên đánh giá (nội bộ) |
+| **IdCardStatus** | 0=DraftCard, 1=Issued, 2=Active, 3=Lost, 4=Damaged, 5=Revoked, 6=ReissueRequested, 7=Reissued | Trạng thái thẻ ID nhân viên |
+| **OnboardingStatus** | 0=Created, 1=InProgress, 2=Blocked, 3=Overdue, 4=Completed, 5=Activated | Trạng thái phiên Onboarding |
 | **GoalStatus** | 0=NotStarted, 1=InProgress, 2=Achieved, 3=NotAchieved | Trạng thái mục tiêu KPI |
 
 ---
