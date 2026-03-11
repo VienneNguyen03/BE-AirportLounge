@@ -125,6 +125,45 @@ namespace AirportLounge.Persistence.Migrations
                     b.ToTable("audit_logs", (string)null);
                 });
 
+            modelBuilder.Entity("AirportLounge.Domain.Entities.Department", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique()
+                        .HasFilter("\"IsDeleted\" = false");
+
+                    b.ToTable("departments", (string)null);
+                });
+
             modelBuilder.Entity("AirportLounge.Domain.Entities.Employee", b =>
                 {
                     b.Property<Guid>("Id")
@@ -155,9 +194,8 @@ namespace AirportLounge.Persistence.Migrations
                     b.Property<DateTime?>("DateOfBirth")
                         .HasColumnType("timestamp without time zone");
 
-                    b.Property<string>("Department")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
+                    b.Property<Guid?>("DepartmentId")
+                        .HasColumnType("uuid");
 
                     b.Property<string>("EmergencyContactName")
                         .HasMaxLength(200)
@@ -200,17 +238,16 @@ namespace AirportLounge.Persistence.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
-                    b.Property<string>("Position")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
+                    b.Property<Guid?>("PositionId")
+                        .HasColumnType("uuid");
 
                     b.Property<string>("ProfilePhotoUrl")
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
                     b.Property<string>("Skills")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
 
                     b.Property<string>("TaxCode")
                         .HasMaxLength(50)
@@ -231,9 +268,13 @@ namespace AirportLounge.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("DepartmentId");
+
                     b.HasIndex("EmployeeCode")
                         .IsUnique()
                         .HasFilter("\"IsDeleted\" = false");
+
+                    b.HasIndex("PositionId");
 
                     b.HasIndex("UserId")
                         .IsUnique();
@@ -306,6 +347,9 @@ namespace AirportLounge.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<DateTime?>("ActivatedAt")
+                        .HasColumnType("timestamp without time zone");
+
                     b.Property<string>("CardNumber")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -320,18 +364,27 @@ namespace AirportLounge.Persistence.Migrations
                     b.Property<Guid>("EmployeeId")
                         .HasColumnType("uuid");
 
+                    b.Property<DateTime?>("ExpiryDate")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid?>("IdCardTemplateId")
+                        .HasColumnType("uuid");
+
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
-                    b.Property<DateTime>("IssuedAt")
+                    b.Property<DateTime?>("IssuedAt")
                         .HasColumnType("timestamp without time zone");
 
-                    b.Property<Guid>("IssuedById")
+                    b.Property<Guid?>("IssuedById")
                         .HasColumnType("uuid");
 
                     b.Property<string>("QrCodeData")
                         .HasMaxLength(2000)
                         .HasColumnType("character varying(2000)");
+
+                    b.Property<Guid?>("ReplacedByCardId")
+                        .HasColumnType("uuid");
 
                     b.Property<string>("RevokeReason")
                         .HasMaxLength(500)
@@ -342,6 +395,12 @@ namespace AirportLounge.Persistence.Migrations
 
                     b.Property<Guid?>("RevokedById")
                         .HasColumnType("uuid");
+
+                    b.Property<uint>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
 
                     b.Property<int>("Status")
                         .HasColumnType("integer");
@@ -363,9 +422,153 @@ namespace AirportLounge.Persistence.Migrations
 
                     b.HasIndex("EmployeeId");
 
+                    b.HasIndex("IdCardTemplateId");
+
                     b.HasIndex("IssuedById");
 
+                    b.HasIndex("ReplacedByCardId");
+
                     b.ToTable("employee_id_cards", (string)null);
+                });
+
+            modelBuilder.Entity("AirportLounge.Domain.Entities.IdCardEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid>("CardId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Comment")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("text");
+
+                    b.Property<int>("FromStatus")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime>("PerformedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid>("PerformedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("ToStatus")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CardId");
+
+                    b.HasIndex("PerformedById");
+
+                    b.ToTable("id_card_events", (string)null);
+                });
+
+            modelBuilder.Entity("AirportLounge.Domain.Entities.IdCardTemplate", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("LayoutJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("id_card_templates", (string)null);
+                });
+
+            modelBuilder.Entity("AirportLounge.Domain.Entities.LeaveAttachment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("text");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("FileUrl")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("LeaveRequestId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LeaveRequestId");
+
+                    b.ToTable("leave_attachments", (string)null);
                 });
 
             modelBuilder.Entity("AirportLounge.Domain.Entities.LeaveBalance", b =>
@@ -388,6 +591,10 @@ namespace AirportLounge.Persistence.Migrations
 
                     b.Property<Guid>("LeaveTypeId")
                         .HasColumnType("uuid");
+
+                    b.Property<decimal>("ReservedDays")
+                        .HasPrecision(5, 1)
+                        .HasColumnType("numeric(5,1)");
 
                     b.Property<decimal>("TotalDays")
                         .HasPrecision(5, 1)
@@ -428,6 +635,10 @@ namespace AirportLounge.Persistence.Migrations
                     b.Property<string>("CreatedBy")
                         .HasColumnType("text");
 
+                    b.Property<string>("DecisionReason")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
                     b.Property<Guid>("EmployeeId")
                         .HasColumnType("uuid");
 
@@ -437,7 +648,13 @@ namespace AirportLounge.Persistence.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("IsHalfDay")
+                        .HasColumnType("boolean");
+
                     b.Property<Guid>("LeaveTypeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ManagerId")
                         .HasColumnType("uuid");
 
                     b.Property<string>("Reason")
@@ -453,6 +670,12 @@ namespace AirportLounge.Persistence.Migrations
                     b.Property<string>("ReviewerComment")
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)");
+
+                    b.Property<uint>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
 
                     b.Property<DateTime>("StartDate")
                         .HasColumnType("timestamp without time zone");
@@ -648,6 +871,9 @@ namespace AirportLounge.Persistence.Migrations
                     b.Property<string>("CreatedBy")
                         .HasColumnType("text");
 
+                    b.Property<DateTime?>("DueDate")
+                        .HasColumnType("timestamp without time zone");
+
                     b.Property<Guid>("EmployeeId")
                         .HasColumnType("uuid");
 
@@ -660,12 +886,22 @@ namespace AirportLounge.Persistence.Migrations
                     b.Property<DateTime>("LastWorkingDate")
                         .HasColumnType("timestamp without time zone");
 
+                    b.Property<string>("Notes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
                     b.Property<string>("Reason")
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)");
 
                     b.Property<DateTime>("ResignationDate")
                         .HasColumnType("timestamp without time zone");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("bytea");
 
                     b.Property<int>("Status")
                         .HasColumnType("integer");
@@ -681,6 +917,59 @@ namespace AirportLounge.Persistence.Migrations
                     b.HasIndex("EmployeeId");
 
                     b.ToTable("offboarding_processes", (string)null);
+                });
+
+            modelBuilder.Entity("AirportLounge.Domain.Entities.OffboardingTask", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Category")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<bool>("IsCompleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("ProcessId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProcessId");
+
+                    b.ToTable("offboarding_tasks", (string)null);
                 });
 
             modelBuilder.Entity("AirportLounge.Domain.Entities.OnboardingProcess", b =>
@@ -701,11 +990,24 @@ namespace AirportLounge.Persistence.Migrations
                     b.Property<string>("CreatedBy")
                         .HasColumnType("text");
 
+                    b.Property<DateTime?>("DueDate")
+                        .HasColumnType("timestamp without time zone");
+
                     b.Property<Guid>("EmployeeId")
                         .HasColumnType("uuid");
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("bytea");
 
                     b.Property<DateTime>("StartDate")
                         .HasColumnType("timestamp without time zone");
@@ -737,6 +1039,9 @@ namespace AirportLounge.Persistence.Migrations
                     b.Property<Guid?>("AssignedToId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("Category")
+                        .HasColumnType("text");
+
                     b.Property<DateTime?>("CompletedAt")
                         .HasColumnType("timestamp without time zone");
 
@@ -758,6 +1063,9 @@ namespace AirportLounge.Persistence.Migrations
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("text");
 
                     b.Property<Guid>("ProcessId")
                         .HasColumnType("uuid");
@@ -942,6 +1250,9 @@ namespace AirportLounge.Persistence.Migrations
                     b.Property<string>("CreatedBy")
                         .HasColumnType("text");
 
+                    b.Property<DateTime?>("DueDate")
+                        .HasColumnType("timestamp without time zone");
+
                     b.Property<Guid>("EmployeeId")
                         .HasColumnType("uuid");
 
@@ -955,6 +1266,10 @@ namespace AirportLounge.Persistence.Migrations
                     b.Property<string>("ManagerAssessment")
                         .HasMaxLength(4000)
                         .HasColumnType("character varying(4000)");
+
+                    b.Property<decimal?>("ManagerScore")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)");
 
                     b.Property<decimal?>("OverallScore")
                         .HasPrecision(5, 2)
@@ -974,9 +1289,19 @@ namespace AirportLounge.Persistence.Migrations
                     b.Property<Guid>("ReviewerId")
                         .HasColumnType("uuid");
 
+                    b.Property<uint>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.Property<string>("SelfAssessment")
                         .HasMaxLength(4000)
                         .HasColumnType("character varying(4000)");
+
+                    b.Property<decimal?>("SelfScore")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)");
 
                     b.Property<int>("Status")
                         .HasColumnType("integer");
@@ -994,6 +1319,90 @@ namespace AirportLounge.Persistence.Migrations
                     b.HasIndex("ReviewerId");
 
                     b.ToTable("performance_reviews", (string)null);
+                });
+
+            modelBuilder.Entity("AirportLounge.Domain.Entities.Position", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique()
+                        .HasFilter("\"IsDeleted\" = false");
+
+                    b.ToTable("positions", (string)null);
+                });
+
+            modelBuilder.Entity("AirportLounge.Domain.Entities.ReviewFeedback", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Comment")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("FromStaffId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsAnonymous")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("ReviewId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal?>("Score")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReviewId");
+
+                    b.ToTable("review_feedbacks", (string)null);
                 });
 
             modelBuilder.Entity("AirportLounge.Domain.Entities.SalaryStructure", b =>
@@ -1143,6 +1552,45 @@ namespace AirportLounge.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("shift_assignments", (string)null);
+                });
+
+            modelBuilder.Entity("AirportLounge.Domain.Entities.Skill", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique()
+                        .HasFilter("\"IsDeleted\" = false");
+
+                    b.ToTable("skills", (string)null);
                 });
 
             modelBuilder.Entity("AirportLounge.Domain.Entities.TaskItem", b =>
@@ -1434,11 +1882,25 @@ namespace AirportLounge.Persistence.Migrations
 
             modelBuilder.Entity("AirportLounge.Domain.Entities.Employee", b =>
                 {
+                    b.HasOne("AirportLounge.Domain.Entities.Department", "Department")
+                        .WithMany("Employees")
+                        .HasForeignKey("DepartmentId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("AirportLounge.Domain.Entities.Position", "Position")
+                        .WithMany("Employees")
+                        .HasForeignKey("PositionId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("AirportLounge.Domain.Entities.User", "User")
                         .WithOne("Employee")
                         .HasForeignKey("AirportLounge.Domain.Entities.Employee", "UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Department");
+
+                    b.Navigation("Position");
 
                     b.Navigation("User");
                 });
@@ -1470,15 +1932,55 @@ namespace AirportLounge.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("AirportLounge.Domain.Entities.IdCardTemplate", null)
+                        .WithMany("Cards")
+                        .HasForeignKey("IdCardTemplateId");
+
                     b.HasOne("AirportLounge.Domain.Entities.User", "IssuedBy")
                         .WithMany()
                         .HasForeignKey("IssuedById")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("AirportLounge.Domain.Entities.EmployeeIdCard", "ReplacedByCard")
+                        .WithMany()
+                        .HasForeignKey("ReplacedByCardId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Employee");
 
                     b.Navigation("IssuedBy");
+
+                    b.Navigation("ReplacedByCard");
+                });
+
+            modelBuilder.Entity("AirportLounge.Domain.Entities.IdCardEvent", b =>
+                {
+                    b.HasOne("AirportLounge.Domain.Entities.EmployeeIdCard", "Card")
+                        .WithMany("Events")
+                        .HasForeignKey("CardId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("AirportLounge.Domain.Entities.User", "PerformedBy")
+                        .WithMany()
+                        .HasForeignKey("PerformedById")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Card");
+
+                    b.Navigation("PerformedBy");
+                });
+
+            modelBuilder.Entity("AirportLounge.Domain.Entities.LeaveAttachment", b =>
+                {
+                    b.HasOne("AirportLounge.Domain.Entities.LeaveRequest", "LeaveRequest")
+                        .WithMany("Attachments")
+                        .HasForeignKey("LeaveRequestId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("LeaveRequest");
                 });
 
             modelBuilder.Entity("AirportLounge.Domain.Entities.LeaveBalance", b =>
@@ -1545,6 +2047,17 @@ namespace AirportLounge.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("Employee");
+                });
+
+            modelBuilder.Entity("AirportLounge.Domain.Entities.OffboardingTask", b =>
+                {
+                    b.HasOne("AirportLounge.Domain.Entities.OffboardingProcess", "Process")
+                        .WithMany("Tasks")
+                        .HasForeignKey("ProcessId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Process");
                 });
 
             modelBuilder.Entity("AirportLounge.Domain.Entities.OnboardingProcess", b =>
@@ -1622,6 +2135,17 @@ namespace AirportLounge.Persistence.Migrations
                     b.Navigation("Employee");
 
                     b.Navigation("Reviewer");
+                });
+
+            modelBuilder.Entity("AirportLounge.Domain.Entities.ReviewFeedback", b =>
+                {
+                    b.HasOne("AirportLounge.Domain.Entities.PerformanceReview", "Review")
+                        .WithMany("Feedbacks")
+                        .HasForeignKey("ReviewId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Review");
                 });
 
             modelBuilder.Entity("AirportLounge.Domain.Entities.SalaryStructure", b =>
@@ -1708,6 +2232,11 @@ namespace AirportLounge.Persistence.Migrations
                     b.Navigation("LoungeZone");
                 });
 
+            modelBuilder.Entity("AirportLounge.Domain.Entities.Department", b =>
+                {
+                    b.Navigation("Employees");
+                });
+
             modelBuilder.Entity("AirportLounge.Domain.Entities.Employee", b =>
                 {
                     b.Navigation("AssignedTasks");
@@ -1735,6 +2264,21 @@ namespace AirportLounge.Persistence.Migrations
                     b.Navigation("TrainingEnrollments");
                 });
 
+            modelBuilder.Entity("AirportLounge.Domain.Entities.EmployeeIdCard", b =>
+                {
+                    b.Navigation("Events");
+                });
+
+            modelBuilder.Entity("AirportLounge.Domain.Entities.IdCardTemplate", b =>
+                {
+                    b.Navigation("Cards");
+                });
+
+            modelBuilder.Entity("AirportLounge.Domain.Entities.LeaveRequest", b =>
+                {
+                    b.Navigation("Attachments");
+                });
+
             modelBuilder.Entity("AirportLounge.Domain.Entities.LeaveType", b =>
                 {
                     b.Navigation("LeaveBalances");
@@ -1751,9 +2295,24 @@ namespace AirportLounge.Persistence.Migrations
                     b.Navigation("Tasks");
                 });
 
+            modelBuilder.Entity("AirportLounge.Domain.Entities.OffboardingProcess", b =>
+                {
+                    b.Navigation("Tasks");
+                });
+
             modelBuilder.Entity("AirportLounge.Domain.Entities.OnboardingProcess", b =>
                 {
                     b.Navigation("Tasks");
+                });
+
+            modelBuilder.Entity("AirportLounge.Domain.Entities.PerformanceReview", b =>
+                {
+                    b.Navigation("Feedbacks");
+                });
+
+            modelBuilder.Entity("AirportLounge.Domain.Entities.Position", b =>
+                {
+                    b.Navigation("Employees");
                 });
 
             modelBuilder.Entity("AirportLounge.Domain.Entities.Shift", b =>
