@@ -9,11 +9,14 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AirportLounge.Application.Features.Offboarding.Commands;
 
+public record OffboardingTaskInput(string Title, string? Description, string? Category, int SortOrder);
+
 public record InitiateOffboardingCommand(
     Guid EmployeeId,
     DateTime ResignationDate,
     DateTime LastWorkingDate,
-    string? Reason) : IRequest<Result<Guid>>;
+    string? Reason,
+    List<OffboardingTaskInput>? Tasks) : IRequest<Result<Guid>>;
 
 public class InitiateOffboardingCommandHandler : IRequestHandler<InitiateOffboardingCommand, Result<Guid>>
 {
@@ -49,6 +52,23 @@ public class InitiateOffboardingCommandHandler : IRequestHandler<InitiateOffboar
         };
 
         await _uow.OffboardingProcesses.AddAsync(process, ct);
+
+        if (req.Tasks is { Count: > 0 })
+        {
+            foreach (var t in req.Tasks)
+            {
+                await _uow.OffboardingTasks.AddAsync(new OffboardingTask
+                {
+                    ProcessId = process.Id,
+                    Title = t.Title,
+                    Description = t.Description,
+                    Category = t.Category,
+                    SortOrder = t.SortOrder,
+                    CreatedBy = _currentUser.Email
+                }, ct);
+            }
+        }
+
         await _uow.SaveChangesAsync(ct);
         await _cache.RemoveAsync(CacheKeys.Offboarding(req.EmployeeId), ct);
 
