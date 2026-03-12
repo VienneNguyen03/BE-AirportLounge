@@ -11,7 +11,7 @@ public record GetEmployeeByIdQuery(Guid EmployeeId) : IRequest<Result<EmployeeDe
 
 public record EmployeeDetailDto(
     Guid Id, Guid UserId, string EmployeeCode, string FullName, string Email,
-    string? PhoneNumber, string Role, string? Department, string? Position,
+    string? PhoneNumber, string Role, string? Department, Guid? DepartmentId, string? Position, Guid? PositionId,
     string? Skills, DateTime? DateOfBirth, DateTime HireDate,
     bool IsActive, DateTime CreatedAt,
     string? NationalId, string? Nationality, int? Gender, int? MaritalStatus,
@@ -50,7 +50,8 @@ public class GetEmployeeByIdQueryHandler : IRequestHandler<GetEmployeeByIdQuery,
         var dto = new EmployeeDetailDto(
             employee.Id, employee.UserId, employee.EmployeeCode,
             employee.User.FullName, employee.User.Email, employee.User.PhoneNumber,
-            employee.User.Role.ToString(), employee.Department?.Name, employee.Position?.Name,
+            employee.User.Role.ToString(), employee.Department?.Name, employee.DepartmentId,
+            employee.Position?.Name, employee.PositionId,
             employee.Skills, employee.DateOfBirth, employee.HireDate,
             employee.User.IsActive, employee.CreatedAt,
             employee.NationalId, employee.Nationality,
