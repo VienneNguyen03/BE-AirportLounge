@@ -19,7 +19,7 @@ public class MasterDataController : ControllerBase
     // --- DEPARTMENTS ---
     
     [HttpGet("departments")]
-    [ProducesResponseType(typeof(Result<PaginatedList<MasterDataDto>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Result<PaginatedList<DepartmentDto>>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetDepartments([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
     {
         var result = await _mediator.Send(new GetDepartmentsQuery(pageNumber, pageSize));
@@ -28,17 +28,18 @@ public class MasterDataController : ControllerBase
 
     [HttpPost("departments")]
     [ProducesResponseType(typeof(Result<Guid>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> CreateDepartment([FromBody] MasterDataBody body)
+    public async Task<IActionResult> CreateDepartment([FromBody] CreateDepartmentCommand command)
     {
-        var result = await _mediator.Send(new CreateMasterDataCommand(MasterDataType.Department, body.Name, body.Description));
+        var result = await _mediator.Send(command);
         return result.IsSuccess ? Ok(result) : BadRequest(result);
     }
 
     [HttpPut("departments/{id:guid}")]
     [ProducesResponseType(typeof(Result<bool>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> UpdateDepartment(Guid id, [FromBody] MasterDataBody body)
+    public async Task<IActionResult> UpdateDepartment(Guid id, [FromBody] UpdateDepartmentCommand command)
     {
-        var result = await _mediator.Send(new UpdateMasterDataCommand(MasterDataType.Department, id, body.Name, body.Description, body.IsActive));
+        if (id != command.Id) return BadRequest("ID mismatch");
+        var result = await _mediator.Send(command);
         return result.IsSuccess ? Ok(result) : BadRequest(result);
     }
 
@@ -46,14 +47,14 @@ public class MasterDataController : ControllerBase
     [ProducesResponseType(typeof(Result<bool>), StatusCodes.Status200OK)]
     public async Task<IActionResult> DeleteDepartment(Guid id)
     {
-        var result = await _mediator.Send(new DeleteMasterDataCommand(MasterDataType.Department, id));
+        var result = await _mediator.Send(new DeleteDepartmentCommand(id));
         return result.IsSuccess ? Ok(result) : BadRequest(result);
     }
 
     // --- POSITIONS ---
 
     [HttpGet("positions")]
-    [ProducesResponseType(typeof(Result<PaginatedList<MasterDataDto>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Result<PaginatedList<PositionDto>>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetPositions([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
     {
         var result = await _mediator.Send(new GetPositionsQuery(pageNumber, pageSize));
@@ -62,17 +63,18 @@ public class MasterDataController : ControllerBase
 
     [HttpPost("positions")]
     [ProducesResponseType(typeof(Result<Guid>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> CreatePosition([FromBody] MasterDataBody body)
+    public async Task<IActionResult> CreatePosition([FromBody] CreatePositionCommand command)
     {
-        var result = await _mediator.Send(new CreateMasterDataCommand(MasterDataType.Position, body.Name, body.Description));
+        var result = await _mediator.Send(command);
         return result.IsSuccess ? Ok(result) : BadRequest(result);
     }
 
     [HttpPut("positions/{id:guid}")]
     [ProducesResponseType(typeof(Result<bool>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> UpdatePosition(Guid id, [FromBody] MasterDataBody body)
+    public async Task<IActionResult> UpdatePosition(Guid id, [FromBody] UpdatePositionCommand command)
     {
-        var result = await _mediator.Send(new UpdateMasterDataCommand(MasterDataType.Position, id, body.Name, body.Description, body.IsActive));
+        if (id != command.Id) return BadRequest("ID mismatch");
+        var result = await _mediator.Send(command);
         return result.IsSuccess ? Ok(result) : BadRequest(result);
     }
 
@@ -80,14 +82,14 @@ public class MasterDataController : ControllerBase
     [ProducesResponseType(typeof(Result<bool>), StatusCodes.Status200OK)]
     public async Task<IActionResult> DeletePosition(Guid id)
     {
-        var result = await _mediator.Send(new DeleteMasterDataCommand(MasterDataType.Position, id));
+        var result = await _mediator.Send(new DeletePositionCommand(id));
         return result.IsSuccess ? Ok(result) : BadRequest(result);
     }
 
     // --- SKILLS ---
 
     [HttpGet("skills")]
-    [ProducesResponseType(typeof(Result<PaginatedList<MasterDataDto>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Result<PaginatedList<SkillDto>>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetSkills([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
     {
         var result = await _mediator.Send(new GetSkillsQuery(pageNumber, pageSize));
@@ -96,17 +98,18 @@ public class MasterDataController : ControllerBase
 
     [HttpPost("skills")]
     [ProducesResponseType(typeof(Result<Guid>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> CreateSkill([FromBody] MasterDataBody body)
+    public async Task<IActionResult> CreateSkill([FromBody] CreateSkillCommand command)
     {
-        var result = await _mediator.Send(new CreateMasterDataCommand(MasterDataType.Skill, body.Name, body.Description));
+        var result = await _mediator.Send(command);
         return result.IsSuccess ? Ok(result) : BadRequest(result);
     }
 
     [HttpPut("skills/{id:guid}")]
     [ProducesResponseType(typeof(Result<bool>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> UpdateSkill(Guid id, [FromBody] MasterDataBody body)
+    public async Task<IActionResult> UpdateSkill(Guid id, [FromBody] UpdateSkillCommand command)
     {
-        var result = await _mediator.Send(new UpdateMasterDataCommand(MasterDataType.Skill, id, body.Name, body.Description, body.IsActive));
+        if (id != command.Id) return BadRequest("ID mismatch");
+        var result = await _mediator.Send(command);
         return result.IsSuccess ? Ok(result) : BadRequest(result);
     }
 
@@ -114,9 +117,7 @@ public class MasterDataController : ControllerBase
     [ProducesResponseType(typeof(Result<bool>), StatusCodes.Status200OK)]
     public async Task<IActionResult> DeleteSkill(Guid id)
     {
-        var result = await _mediator.Send(new DeleteMasterDataCommand(MasterDataType.Skill, id));
+        var result = await _mediator.Send(new DeleteSkillCommand(id));
         return result.IsSuccess ? Ok(result) : BadRequest(result);
     }
 }
-
-public record MasterDataBody(string Name, string? Description, bool IsActive = true);
