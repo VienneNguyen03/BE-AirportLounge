@@ -98,6 +98,7 @@ using (var scope = app.Services.CreateScope())
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     db.Database.Migrate();
     await AirportLounge.Persistence.DataSeeder.SeedAdminAsync(db);
+    await AirportLounge.Persistence.DataSeeder.SeedDemoStaffAsync(db);
 }
 
 // Middleware pipeline
