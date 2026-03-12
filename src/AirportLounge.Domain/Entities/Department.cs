@@ -8,4 +8,5 @@ public class Department : AuditableEntity
     public string? Description { get; set; }
 
     public ICollection<Employee> Employees { get; set; } = new List<Employee>();
+    public ICollection<Position> Positions { get; set; } = new List<Position>();
 }
