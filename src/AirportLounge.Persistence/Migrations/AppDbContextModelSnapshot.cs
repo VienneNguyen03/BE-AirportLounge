@@ -1861,6 +1861,21 @@ namespace AirportLounge.Persistence.Migrations
                     b.ToTable("zone_status_logs", (string)null);
                 });
 
+            modelBuilder.Entity("DepartmentPosition", b =>
+                {
+                    b.Property<Guid>("DepartmentsId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("PositionsId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("DepartmentsId", "PositionsId");
+
+                    b.HasIndex("PositionsId");
+
+                    b.ToTable("department_positions", (string)null);
+                });
+
             modelBuilder.Entity("AirportLounge.Domain.Entities.Attendance", b =>
                 {
                     b.HasOne("AirportLounge.Domain.Entities.Employee", "Employee")
@@ -2230,6 +2245,21 @@ namespace AirportLounge.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("LoungeZone");
+                });
+
+            modelBuilder.Entity("DepartmentPosition", b =>
+                {
+                    b.HasOne("AirportLounge.Domain.Entities.Department", null)
+                        .WithMany()
+                        .HasForeignKey("DepartmentsId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("AirportLounge.Domain.Entities.Position", null)
+                        .WithMany()
+                        .HasForeignKey("PositionsId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("AirportLounge.Domain.Entities.Department", b =>
