@@ -30,6 +30,20 @@ public class UpdateEmployeeCommandHandler : IRequestHandler<UpdateEmployeeComman
         if (employee is null)
             return Result<bool>.Failure("Employee not found");
 
+        // Validate Department-Position relationship if both are provided
+        if (request.DepartmentId.HasValue && request.PositionId.HasValue)
+        {
+            var position = await _unitOfWork.Positions.Query()
+                .Include(p => p.Departments)
+                .FirstOrDefaultAsync(p => p.Id == request.PositionId.Value, cancellationToken);
+
+            if (position == null)
+                return Result<bool>.Failure("Position not found");
+
+            if (!position.Departments.Any(d => d.Id == request.DepartmentId.Value))
+                return Result<bool>.Failure("The selected position does not belong to the selected department");
+        }
+
         var oldValues = System.Text.Json.JsonSerializer.Serialize(new
         {
             employee.User.FullName, employee.User.PhoneNumber,
