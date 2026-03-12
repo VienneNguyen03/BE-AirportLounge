@@ -35,6 +35,20 @@ public class CreateEmployeeCommandHandler : IRequestHandler<CreateEmployeeComman
         if (existingUser || existingEmployeeCode)
             return Result<Guid>.Failure("A user with this email or employee code already exists");
 
+        // Validate Department-Position relationship if both are provided
+        if (request.DepartmentId.HasValue && request.PositionId.HasValue)
+        {
+            var position = await _unitOfWork.Positions.Query()
+                .Include(p => p.Departments)
+                .FirstOrDefaultAsync(p => p.Id == request.PositionId.Value, cancellationToken);
+
+            if (position == null)
+                return Result<Guid>.Failure("Position not found");
+
+            if (!position.Departments.Any(d => d.Id == request.DepartmentId.Value))
+                return Result<Guid>.Failure("The selected position does not belong to the selected department");
+        }
+
         var user = new User
         {
             FullName = request.FullName,
