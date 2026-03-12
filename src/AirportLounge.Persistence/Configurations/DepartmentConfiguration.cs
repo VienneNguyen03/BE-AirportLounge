@@ -17,5 +17,10 @@ public class DepartmentConfiguration : IEntityTypeConfiguration<Department>
         builder.Property(e => e.Description).HasMaxLength(500);
 
         builder.HasQueryFilter(e => !e.IsDeleted);
+
+        builder
+            .HasMany(d => d.Positions)
+            .WithMany(p => p.Departments)
+            .UsingEntity(j => j.ToTable("department_positions"));
     }
 }
