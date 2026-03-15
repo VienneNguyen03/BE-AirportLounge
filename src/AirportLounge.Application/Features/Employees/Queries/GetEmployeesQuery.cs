@@ -61,7 +61,7 @@ public class GetEmployeesQueryHandler : IRequestHandler<GetEmployeesQuery, Resul
             .Skip((request.PageNumber - 1) * request.PageSize)
             .Take(request.PageSize)
             .Select(e => new EmployeeListDto(
-                e.Id, e.EmployeeCode, e.User.FullName, e.User.Email, e.User.PhoneNumber,
+                e.Id, e.EmployeeCode, e.User.FullName, e.User.Email, e.User.PhoneNumber ?? string.Empty,
                 e.User.Role.ToString(), e.Department != null ? e.Department.Name : null, e.Position != null ? e.Position.Name : null, e.User.IsActive))
             .ToListAsync(cancellationToken);
 
