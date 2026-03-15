@@ -18,10 +18,6 @@ public class LeaveRequest : AuditableEntity
     public Guid? ReviewedById { get; set; }
     public DateTime? ReviewedAt { get; set; }
     public string? ReviewerComment { get; set; }
-
-    /// <summary>
-    /// Concurrency token for optimistic concurrency control.
-    /// </summary>
     public uint RowVersion { get; set; }
 
     public Employee Employee { get; set; } = null!;
