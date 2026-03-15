@@ -88,5 +88,6 @@ public static class CacheKeys
     public const string DepartmentsList = "masterdata:departments:all";
     public const string PositionsList = "masterdata:positions:all";
     public const string SkillsList = "masterdata:skills:all";
+    public const string TaskCategoriesList = "masterdata:taskcategories:all";
     public static readonly TimeSpan MasterDataTtl = TimeSpan.FromHours(24);
 }
