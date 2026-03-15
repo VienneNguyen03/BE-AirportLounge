@@ -120,4 +120,39 @@ public class MasterDataController : ControllerBase
         var result = await _mediator.Send(new DeleteSkillCommand(id));
         return result.IsSuccess ? Ok(result) : BadRequest(result);
     }
+
+    // --- TASK CATEGORIES ---
+
+    [HttpGet("task-categories")]
+    [ProducesResponseType(typeof(Result<PaginatedList<TaskCategoryDto>>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetTaskCategories([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
+    {
+        var result = await _mediator.Send(new GetTaskCategoriesQuery(pageNumber, pageSize));
+        return Ok(result);
+    }
+
+    [HttpPost("task-categories")]
+    [ProducesResponseType(typeof(Result<Guid>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> CreateTaskCategory([FromBody] CreateTaskCategoryCommand command)
+    {
+        var result = await _mediator.Send(command);
+        return result.IsSuccess ? Ok(result) : BadRequest(result);
+    }
+
+    [HttpPut("task-categories/{id:guid}")]
+    [ProducesResponseType(typeof(Result<bool>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> UpdateTaskCategory(Guid id, [FromBody] UpdateTaskCategoryCommand command)
+    {
+        if (id != command.Id) return BadRequest("ID mismatch");
+        var result = await _mediator.Send(command);
+        return result.IsSuccess ? Ok(result) : BadRequest(result);
+    }
+
+    [HttpDelete("task-categories/{id:guid}")]
+    [ProducesResponseType(typeof(Result<bool>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> DeleteTaskCategory(Guid id)
+    {
+        var result = await _mediator.Send(new DeleteTaskCategoryCommand(id));
+        return result.IsSuccess ? Ok(result) : BadRequest(result);
+    }
 }
