@@ -25,6 +25,47 @@ public class IdCardsController : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("templates")]
+    [ProducesResponseType(typeof(Result<List<IdCardTemplateDto>>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetTemplates()
+    {
+        var result = await _mediator.Send(new GetIdCardTemplatesQuery());
+        return Ok(result);
+    }
+
+    [HttpPost("templates")]
+    [Authorize(Roles = "Admin")]
+    [ProducesResponseType(typeof(Result<Guid>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> CreateTemplate([FromBody] CreateIdCardTemplateCommand command)
+    {
+        var result = await _mediator.Send(command);
+        return result.IsSuccess ? Ok(result) : BadRequest(result);
+    }
+
+    [HttpPut("templates/{id:guid}")]
+    [Authorize(Roles = "Admin")]
+    [ProducesResponseType(typeof(Result<bool>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> UpdateTemplate(Guid id, [FromBody] UpdateIdCardTemplateCommand command)
+    {
+        if (id != command.Id)
+            return BadRequest(Result<bool>.Failure("ID mismatch."));
+
+        var result = await _mediator.Send(command);
+        return result.IsSuccess ? Ok(result) : BadRequest(result);
+    }
+
+    [HttpDelete("templates/{id:guid}")]
+    [Authorize(Roles = "Admin")]
+    [ProducesResponseType(typeof(Result<bool>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> DeleteTemplate(Guid id)
+    {
+        var result = await _mediator.Send(new DeleteIdCardTemplateCommand(id));
+        return result.IsSuccess ? Ok(result) : BadRequest(result);
+    }
+
     [HttpPost]
     [Authorize(Roles = "Admin,Manager")]
     [ProducesResponseType(typeof(Result<Guid>), StatusCodes.Status200OK)]
