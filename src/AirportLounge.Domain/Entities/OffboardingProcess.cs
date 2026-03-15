@@ -15,6 +15,7 @@ public class OffboardingProcess : AuditableEntity
     public bool ExitSurveyCompleted { get; set; }
     public bool AssetReturned { get; set; }
     public bool AccessRevoked { get; set; }
+    public Guid? IdCardIdToRevoke { get; set; }
     public byte[] RowVersion { get; set; } = Array.Empty<byte>();
 
     public Employee Employee { get; set; } = null!;
