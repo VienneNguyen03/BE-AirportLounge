@@ -19,6 +19,7 @@ public record IdCardDto(
     string? TemplateType, 
     Guid? TemplateId,
     string? LayoutData,
+    string? PrimaryColor,
     IdCardStatus Status,
     DateTime? IssuedAt,
     DateTime? ActivatedAt,
