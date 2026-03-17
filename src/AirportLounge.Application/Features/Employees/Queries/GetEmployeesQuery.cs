@@ -15,7 +15,7 @@ public record GetEmployeesQuery(
 
 public record EmployeeListDto(
     Guid Id, string EmployeeCode, string FullName, string Email, string PhoneNumber,
-    string Role, string? Department, string? Position, bool IsActive);
+    string Role, string? Department, string? Position, bool IsActive, string? ProfilePhotoUrl);
 
 public class GetEmployeesQueryHandler : IRequestHandler<GetEmployeesQuery, Result<PaginatedList<EmployeeListDto>>>
 {
@@ -62,7 +62,7 @@ public class GetEmployeesQueryHandler : IRequestHandler<GetEmployeesQuery, Resul
             .Take(request.PageSize)
             .Select(e => new EmployeeListDto(
                 e.Id, e.EmployeeCode, e.User.FullName, e.User.Email, e.User.PhoneNumber ?? string.Empty,
-                e.User.Role.ToString(), e.Department != null ? e.Department.Name : null, e.Position != null ? e.Position.Name : null, e.User.IsActive))
+                e.User.Role.ToString(), e.Department != null ? e.Department.Name : null, e.Position != null ? e.Position.Name : null, e.User.IsActive, e.ProfilePhotoUrl))
             .ToListAsync(cancellationToken);
 
         return Result<PaginatedList<EmployeeListDto>>.Success(
